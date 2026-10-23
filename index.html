@@ -418,7 +418,7 @@ async function pull(){
   try{
     const q=(t,c)=>sb.from(t).select(c||"*").then(r=>r,e=>({error:{message:(e&&e.message)||String(e)}}));
     const cols=(me&&me.type==="staff"&&me.admin)?"sid,name,strand,pin_hash,pin_changed,pin_plain":"sid,name,strand,pin_hash,pin_changed";
-    const qf=async()=>{let r=await q("staff","id,name,role,key_hash,can_edit");if(r.error)r=await q("staff","id,name,role,key_hash");return r};
+    const qf=async()=>{const admin=me&&me.type==="staff"&&me.admin;let r=admin?await q("staff","id,name,role,key_hash,can_edit,key_plain"):await q("staff","id,name,role,key_hash,can_edit");if(r.error)r=await q("staff","id,name,role,key_hash,can_edit");if(r.error)r=await q("staff","id,name,role,key_hash");return r};
     const qs=async()=>{let r=await q("students",cols);if(r.error)r=await q("students","sid,name,strand,pin_hash");return r};
     const names=["students","staff","records","payments","fines","windows","settings","staff_attendance"];
     const R=await Promise.all([qs(),qf(),q("records"),q("payments"),q("fines"),q("windows"),q("settings"),q("staff_attendance")]);
@@ -557,8 +557,9 @@ $("#chgKey").onclick=async()=>{
   const st=db.staff.find(x=>x.id===me.id),o=$("#oldKey").value.trim().toUpperCase(),n=$("#newKey").value.trim().toUpperCase(),m=$("#keyMsg");
   if(n.length<6){m.textContent="New key must be at least 6 characters.";return}
   if(await hashOf(st.id,o)!==st.key_hash){m.textContent="Current key is wrong.";return}
-  st.key_hash=await hashOf(st.id,n);save();pushHash("staff","id",st.id,"key_hash",st.key_hash);
-  $("#oldKey").value="";$("#newKey").value="";m.textContent="Access key updated.";
+  st.key_hash=await hashOf(st.id,n);st.key_plain=n;save();
+  const err=await updateRow("staff","id",st.id,{key_hash:st.key_hash,key_plain:n});
+  $("#oldKey").value="";$("#newKey").value="";m.textContent=err?"Key changed here, but the database copy failed: "+err:"Access key updated.";
 };
 function fillReset(){
   const sel=$("#rsStu"),v=sel.value;sel.innerHTML="";
@@ -626,9 +627,9 @@ $("#nfBtn").onclick=async()=>{
   if(db.staff.some(x=>x.id.toUpperCase()===id)){flash(m,id+" already exists. Use a different ID.");return}
   if(key.length<6){flash(m,"Access key must be at least 6 characters.");return}
   let hash;try{hash=await hashOf(id,key)}catch(e){flash(m,"Adding accounts needs a secure (https) page.");return}
-  const row={id,name,role,key_hash:hash};const pf=$("#nfPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH["T:"+id]=row.photo}catch(e){}}
+  const row={id,name,role,key_hash:hash,key_plain:key};const pf=$("#nfPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH["T:"+id]=row.photo}catch(e){}}
   const err=await insertRow("staff",row);
-  if(err){flash(m,"Could not save to the database: "+err);return}
+  if(err){flash(m,"Could not save to the database: "+err+(/key_plain/i.test(err)?" (run attendify-staff-passwords.sql in Supabase)":""));return}
   db.staff.push(row);db.staffAll.push(row);db.staff.sort((a,b)=>a.id.localeCompare(b.id));save();
   ["nfId","nfName","nfRole","nfKey","nfPhoto"].forEach(i=>$("#"+i).value="");
   drawRoster();flash(m,"Added "+name+" ("+id+"). They can sign in with that ID and key.",true);
@@ -667,9 +668,9 @@ $("#fsBtn").onclick=async()=>{
   if(key.length<6){flash(m,"Access key must be at least 6 characters.");return}
   const id=nextStaffId();
   let hash;try{hash=await hashOf(id,key)}catch(e){flash(m,"Setup needs a secure (https) page.");return}
-  const row={id,name,role,key_hash:hash};const pf=$("#nfPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH["T:"+id]=row.photo}catch(e){}}
+  const row={id,name,role,key_hash:hash,key_plain:key};const pf=$("#nfPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH["T:"+id]=row.photo}catch(e){}}
   const err=await insertRow("staff",row);
-  if(err){flash(m,"Could not save to the database: "+err);return}
+  if(err){flash(m,"Could not save to the database: "+err+(/key_plain/i.test(err)?" (run attendify-staff-passwords.sql in Supabase)":""));return}
   db.staff.push(row);db.staffAll.push(row);save();
   ["fsName","fsRole","fsKey"].forEach(i=>$("#"+i).value="");
   me={type:"staff",id};screen("staff");
@@ -812,8 +813,8 @@ $("#suBtn").onclick=async()=>{
   if(db.staff.some(x=>x.id.toUpperCase()===id)){flash(m,id+" already has an account.");return}
   if(key.length<6){flash(m,"Password must be at least 6 characters.");return}
   let hash;try{hash=await hashOf(id,key)}catch(e){flash(m,"Sign-up needs a secure (https) page.");return}
-  const row={id,name,role:"Admin",key_hash:hash},err=await insertRow("staff",row);
-  if(err){flash(m,"Could not save: "+err);return}
+  const row={id,name,role:"Admin",key_hash:hash,key_plain:key},err=await insertRow("staff",row);
+  if(err){flash(m,"Could not save: "+err+(/key_plain/i.test(err)?" (run attendify-staff-passwords.sql in Supabase)":""));return}
   db.staff.push(row);db.staffAll.push(row);save();["suName","suId","suKey","suCode"].forEach(i=>$("#"+i).value="");
   me={type:"staff",id,admin:true};applyRole();screen("staff");await markStaffLogin(row);$("#stfTitle").textContent=name+" \u00B7 Admin";$("#date").value=today();loadWin();drawRoster();drawLog();go("dash");
 };
