@@ -100,9 +100,10 @@ body{transition:background .2s,color .2s}
 .idc-h span{font-size:6pt;opacity:.92;line-height:1.2}
 .idc-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;padding:2mm 3mm;min-height:0;text-align:center}
 .idc-q{width:36mm;height:36mm;flex:none;background:#fff;position:relative}
-.idc-q img{width:100%;height:100%;image-rendering:pixelated;display:block}
-.idc-qc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34%;height:34%;border-radius:50%;background:#0e7a45;color:#fff;border:0.6mm solid #fff;box-shadow:0 0 0 0.3mm #0e7a45;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:7pt;font-weight:800}
-.idc-qc img{width:100%;height:100%;object-fit:cover;image-rendering:auto}
+.idc-q img{image-rendering:pixelated}
+.qr-ov{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30%;height:30%;border-radius:50%;background:#0e7a45;color:#fff;border:2px solid #fff;box-shadow:0 0 0 1px #0e7a45;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.idc-q .qr-ov{border-width:0.6mm;box-shadow:0 0 0 0.3mm #0e7a45;font-size:7pt}
+.qr-ov img{width:100%;height:100%;object-fit:cover;image-rendering:auto}
 .idc-ph{grid-column:1/-1;margin:10px 0 2px;break-after:avoid}
 .idc-pg{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,54mm);gap:3mm 4mm;justify-content:start;break-before:auto}
 #printArea .idc-pg:not(:first-of-type){break-before:page}
@@ -246,7 +247,8 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
       <div id="toast"></div>
       <div class="who"><div class="av" id="hAv"></div><div><h2 id="hName" style="margin:0"></h2><div class="muted" id="hMeta"></div></div></div>
       <p class="muted" id="hToday" style="margin:8px 0"></p><p class="bad" id="hWarn" style="margin:6px 0"></p>
-      <div class="row"><button class="p" data-mark="Present">Present</button><button data-mark="Late">Late</button><button data-mark="Absent">Absent</button><button data-mark="Excused">Excused</button></div>
+      <div class="row"><button id="hScanNext">↻ Scan next student</button></div>
+      <div class="row" style="margin-top:8px"><button class="p" data-mark="Present">Present</button><button data-mark="Late">Late</button><button data-mark="Absent">Absent</button><button data-mark="Excused">Excused</button></div>
       <h3 style="margin:16px 0 6px">Fines &amp; payments</h3>
       <p class="muted" id="hBal" style="margin:0 0 8px"></p>
       <div class="row"><input id="fnType" list="fineTypes" placeholder="Fine for (e.g. Littering)" style="flex:1;min-width:160px"><input id="fnAmt" type="number" min="1" placeholder="Amount ₱" style="width:120px"></div>
@@ -375,7 +377,7 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
 
 <script>
 /* No automatic fines. Late and Absent carry no fine; fines are added by hand. */
-const FINE={Present:0,Late:0,Absent:0,Excused:0};
+const FINE={Present:0,Late:30,Absent:0,Excused:0};
 const HAS_DB=!!(SUPA.url&&SUPA.key);
 const KEY=HAS_DB?"qratt_live_v2":"qratt_v4";
 let loaded=!HAS_DB;
@@ -463,7 +465,27 @@ function schoolDayInfo(d){const nc=noClass().find(x=>x.d===d);if(nc)return{ok:fa
 const isSchoolDay=d=>schoolDayInfo(d).ok;
 const sdState={days:new Set(),nc:[]};
 function rescope(){db.students=(db.studentsAll||[]).filter(x=>!x.deleted_at);if(!db.staffAll)db.staffAll=db.staff.slice();db.staff=db.staffAll.filter(x=>!x.deleted_at)}
-function qr(el,text,size){el.innerHTML="";try{const q=qrcode(0,"H");q.addData(text);q.make();el.innerHTML=q.createImgTag(size||6,0)}catch(e){el.textContent=text}}
+function qr(el,text,size,who,fit){
+  el.innerHTML="";
+  let wrap,img;
+  try{
+    const q=qrcode(0,"H");q.addData(text);q.make();
+    wrap=document.createElement(fit?"div":"span");
+    wrap.style.cssText=fit?"position:relative;width:100%;height:100%;display:block;line-height:0":"position:relative;display:inline-block;line-height:0";
+    wrap.innerHTML=q.createImgTag(size||6,0);
+    img=wrap.querySelector("img");
+    if(fit)img.style.cssText="width:100%;height:100%;display:block";
+    el.appendChild(wrap);
+  }catch(e){el.textContent=text;return Promise.resolve()}
+  if(!who)return Promise.resolve();
+  return (async()=>{
+    const p=await getPhoto(who.id,who.staff).catch(()=>"");
+    const c=document.createElement("div");c.className="qr-ov";
+    if(p){const im=document.createElement("img");im.src=p;im.alt="";c.appendChild(im)}
+    else c.textContent=ini(who.name);
+    wrap.appendChild(c);
+  })();
+}
 
 /* ---------- auth ---------- */
 let me=null;
@@ -823,16 +845,28 @@ function drawDash(){
 $("#dAll").onclick=()=>go("records");$("#recBack").onclick=()=>go("dash");
 document.addEventListener("click",async e=>{const b=e.target.closest("[data-paid]");if(!b)return;cur=find(b.dataset.paid);if(!cur)return;await pay(fines(cur.sid));cur=null;$("#hit").hidden=true;drawDash()});
 function showResult(s,rec){cur=s;$("#hit").hidden=true;$("#res").hidden=false;$("#rName").textContent=s.name;$("#rMeta").textContent=s.sid+" \u00B7 "+s.strand;$("#rTime").textContent=rec.time;$("#rDate").textContent=rec.date;$("#rStatus").innerHTML=pill(rec.status);paintAvatar($("#rAv"),s)}
+let autoNextT=null;
 function autoMark(s){
   const date=$("#date").value||today(),st=winState(date);
   if(st&&st.kind==="closed"){show(s,st.nsd?st.text:"Time's up: attendance is closed for "+date+".",false);return}
   const rec={sid:s.sid,name:s.name,date,time:timeNow(),status:st&&st.kind==="late"?"Late":"Present",by:staffName()};
   const i=db.records.findIndex(r=>r.sid===s.sid&&r.date===date);i>=0?db.records[i]=rec:db.records.push(rec);
-  save();pushRecord(rec);showResult(s,rec);drawRoster();drawLog();
+  save();pushRecord(rec);drawRoster();drawLog();
+  clearTimeout(autoNextT);
+  const bal=fines(s.sid);
+  if(bal>0){
+    /* has a balance due (e.g. the ₱30 Late fine just added) \u2014 open the fines screen directly, no auto-continue */
+    show(s,"Saved \u2713 "+s.name+" marked "+rec.status+". Outstanding balance: "+peso(bal)+" \u2014 collect or review below.",true);
+  }else{
+    /* no balance \u2014 show a quick confirmation, then reopen the scanner on its own */
+    showResult(s,rec);
+    autoNextT=setTimeout(()=>{if(!$("#res").hidden){$("#res").hidden=true;if(!stream)$("#camBtn").click()}},1300);
+  }
 }
-$("#rAgain").onclick=()=>{$("#res").hidden=true;if(!stream)$("#camBtn").click()};
-$("#rMore").onclick=()=>{$("#res").hidden=true;show(cur)};
-$("#rBack").onclick=()=>{$("#res").hidden=true;go("dash")};
+$("#rAgain").onclick=()=>{clearTimeout(autoNextT);$("#res").hidden=true;if(!stream)$("#camBtn").click()};
+$("#rMore").onclick=()=>{clearTimeout(autoNextT);$("#res").hidden=true;show(cur)};
+$("#rBack").onclick=()=>{clearTimeout(autoNextT);$("#res").hidden=true;go("dash")};
+$("#hScanNext").onclick=()=>{$("#hit").hidden=true;cur=null;if(!stream)$("#camBtn").click()};
 $("#galBtn").onclick=()=>$("#galFile").click();
 $("#galFile").onchange=async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;const m=$("#camMsg");m.textContent="Reading image\u2026";
@@ -872,14 +906,7 @@ function idCard(s){
   const d=document.createElement("div");d.className="idc";
   d.innerHTML=`<div class="idc-h"><div>${LOGO_SVG}<b>Attendify</b></div><span>${esc((db.settings&&db.settings.school_name)||SCHOOL_NAME)}</span></div><div class="idc-b"><div class="idc-t">${staff?"STAFF":"STUDENT"}</div><div class="idc-q"></div><div class="idc-i"><div class="idc-n">${esc(s.name)}</div><div class="idc-c">${line}</div></div></div><div class="idc-f">SCAN \u2022 ATTEND \u2022 ACHIEVE</div>`;
   const qbox=d.querySelector(".idc-q");
-  qr(qbox,id,8);
-  d._ready=(async()=>{
-    const p=await getPhoto(id,staff).catch(()=>"");
-    const c=document.createElement("div");c.className="idc-qc";
-    if(p){const im=document.createElement("img");im.src=p;im.alt="";c.appendChild(im)}
-    else c.textContent=ini(s.name);
-    qbox.appendChild(c);
-  })();
+  d._ready=qr(qbox,id,8,{id,staff,name:s.name},true);
   return d;
 }
 function classKey(s){const c=parseClass(s.strand);return[c.strand,c.grade,c.sec].join(" \u00B7 ")}
@@ -1152,7 +1179,7 @@ function drawStudent(){
   $("#stTitle").textContent="Student account";
   $("#sName").textContent=s.name;$("#sMeta").textContent=s.sid+" · "+s.strand;paintAvatar($("#sAv"),s);
   $("#sP").textContent=cnt(s.sid,"Present");$("#sA").textContent=cnt(s.sid,"Absent");$("#sL").textContent=cnt(s.sid,"Late");$("#sF").textContent=peso(fines(s.sid));
-  qr($("#sQR"),s.sid,6);$("#sLedger").innerHTML=ledger(s.sid);
+  qr($("#sQR"),s.sid,6,{id:s.sid,staff:false,name:s.name});$("#sLedger").innerHTML=ledger(s.sid);
   const tr=db.records.find(r=>r.sid===s.sid&&r.date===today());$("#sToday").textContent=tr?"Today: "+tr.status+" at "+tr.time:"Today: not recorded yet";tick();$("#sId").innerHTML="";$("#sId").appendChild(idCard(s));
   const r=recs(s.sid).slice().reverse();
   $("#sLog").innerHTML="<tr><th>Date</th><th>Time</th><th>Status</th><th>Fine</th></tr>"+
