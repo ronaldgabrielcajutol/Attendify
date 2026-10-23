@@ -861,7 +861,7 @@ function autoMark(s){
   }else{
     /* no balance \u2014 show a quick confirmation, then reopen the scanner on its own */
     showResult(s,rec);
-    autoNextT=setTimeout(()=>{if(!$("#res").hidden){$("#res").hidden=true;if(!stream)$("#camBtn").click()}},1300);
+    autoNextT=setTimeout(()=>{if(!$("#res").hidden){$("#res").hidden=true;if(!stream)$("#camBtn").click()}},3000);
   }
 }
 $("#rAgain").onclick=()=>{clearTimeout(autoNextT);$("#res").hidden=true;if(!stream)$("#camBtn").click()};
