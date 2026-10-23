@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e7a45">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Attendify">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
+<script>try{var t=localStorage.getItem("attendify_theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>(function(){var a=/\/admin\/?$/i.test(location.pathname)||/^#(admin|staff)$/i.test(location.hash);if(a){document.querySelector('link[rel=manifest]').href="manifest-admin.webmanifest";document.querySelector('meta[name=apple-mobile-web-app-title]').content="Attendify Admin";document.title="Attendify Admin"}})()</script>
+<title>Attendify</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>var SUPA=(typeof SUPA!=="undefined"&&SUPA)||{url:"",key:""};</script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f6fb;--card:#fff;--ink:#16202e;--muted:#67748a;--line:#dee5ef;--brand:#1f5fd6;--ok:#12794a;--bad:#b3261e;--chip:#eef2f9;--okbg:#e4f6ec;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e131a;--card:#161d27;--ink:#e8edf5;--muted:#93a1b5;--line:#27313e;--brand:#2fb26a;--ok:#3ecf8e;--bad:#ff6b63;--chip:#1f2936;--okbg:#14301f}}
+:root[data-theme="dark"]{--bg:#0e131a;--card:#161d27;--ink:#e8edf5;--muted:#93a1b5;--line:#27313e;--brand:#2fb26a;--ok:#3ecf8e;--bad:#ff6b63;--chip:#1f2936;--okbg:#14301f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:18px;margin:0;flex:1}
+h2{font-size:21px;margin:10px 0 2px}h3{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer}
+button.p,button.on{background:var(--brand);border-color:transparent;color:#fff}
+input,select{font:inherit;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);max-width:100%}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.stat{background:var(--chip);border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:26px;line-height:1.2}
+.stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.muted{color:var(--muted);font-size:14px}
+.qr{display:flex;justify-content:center;padding:14px;background:#fff;border-radius:12px}
+.qr img{width:190px;height:190px;image-rendering:pixelated;max-width:100%}
+video{width:100%;border-radius:12px;background:#000}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+.scroll{overflow-x:auto}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.toast{background:var(--okbg);border:1px solid var(--ok);color:var(--ok);padding:10px 12px;border-radius:10px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.idcard{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;background:var(--card)}
+.idcard img{width:130px;height:130px;image-rendering:pixelated}
+.who{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.av{width:64px;height:64px;border-radius:50%;background:var(--chip) center/cover no-repeat;display:grid;place-items:center;font-weight:700;color:var(--muted);flex:none}
+.banner{padding:10px 12px;border-radius:10px;font-weight:600;margin:10px 0}
+.banner.ontime{background:var(--okbg);color:var(--ok)}.banner.late{background:#fff3d6;color:#8a5a00}
+.banner.closed{background:#fde7e5;color:var(--bad)}.banner.wait{background:var(--chip);color:var(--muted)}
+.toast.err{background:transparent;border-color:var(--bad);color:var(--bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+:root{--bg:#f2f8f4;--brand:#0f7a43;--chip:#e8f4ed;--okbg:#dcf3e5;--line:#dcebe2;--ok:#0f7a43}
+.wrap{padding-bottom:92px}.warn{color:#c77800}
+.pill{display:inline-block;padding:2px 10px;border-radius:8px;font-size:12px;font-weight:600}
+.pill.Present{background:#dcf3e5;color:#0f7a43}.pill.Late{background:#fff0cf;color:#a86400}.pill.Absent{background:#fde3e1;color:#b3261e}.pill.Excused{background:#e3ecfb;color:#2a55b0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
+.menuBtn{display:block;width:100%;text-align:left;padding:14px 16px;margin-top:10px;border-radius:14px}
+.menuBtn b{display:block;color:var(--brand);font-size:16px}
+.bnav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
+.bnav button,.bnav button.on{border:0;background:none;flex:1;display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--muted);padding:4px}
+.bnav button.on{color:var(--brand);font-weight:700}
+.okbig{width:64px;height:64px;border-radius:50%;background:var(--brand);color:#fff;font-size:34px;display:grid;place-items:center;margin:0 auto}
+.tile2{background:var(--okbg);border-radius:12px;padding:10px 12px;margin:10px 0;text-align:left}
+.stats{grid-template-columns:repeat(4,1fr)}
+
+:root{--bg:#f5faf7;--card:#ffffff;--ink:#14283a;--muted:#6b7f74;--line:#d7eadf;--brand:#0e7a45;--brand-dark:#0a5a35;--chip:#e7f5ec;--okbg:#dff3e7;--ok:#0e7a45;--bad:#c62a3a}
+h1,h2,h3{color:var(--brand-dark)}
+#hName,#sName,#rName{color:#14265c}
+button{border-color:var(--brand);color:var(--brand-dark);background:var(--card)}
+button.p{background:var(--brand);border-color:transparent;color:#fff}
+input:focus,select:focus{outline:2px solid #9bd3b3;border-color:var(--brand)}
+.stat{background:var(--okbg)}
+.pill.Present{background:#dcf3e5;color:#0e7a45}.pill.Late{background:#fde9c4;color:#b86e00}.pill.Absent{background:#fbd7dc;color:#c62a3a}
+.warn{color:#e08a00}
+:root{color-scheme:light;--bg:#f5faf7;--card:#ffffff;--ink:#14283a;--muted:#66796e;--line:#d7eadf;--brand:#0e7a45;--brand-dark:#0a5a35;--chip:#e7f5ec;--okbg:#dff3e7;--ok:#0e7a45;--bad:#c62a3a;--warn:#c77800;--name:#14265c;--p-ok-bg:#dcf3e5;--p-ok-fg:#0e7a45;--p-late-bg:#fde9c4;--p-late-fg:#b86e00;--p-bad-bg:#fbd7dc;--p-bad-fg:#c62a3a;--p-ex-bg:#e3ecfb;--p-ex-fg:#2a55b0;--warn-bg:#fff3d6;--warn-fg:#8a5a00;--bad-bg:#fde7e5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0b1410;--card:#121f18;--ink:#e5f1ea;--muted:#8fa89a;--line:#233a2d;--brand:#1f9455;--brand-dark:#7fdca6;--chip:#182b21;--okbg:#173325;--ok:#4cd08a;--bad:#ff7b84;--warn:#f0a63a;--name:#cfe0ff;--p-ok-bg:#173a28;--p-ok-fg:#5fdc9a;--p-late-bg:#3d2f10;--p-late-fg:#f0b34a;--p-bad-bg:#41181d;--p-bad-fg:#ff8a92;--p-ex-bg:#1b2b4d;--p-ex-fg:#8fb2ff;--warn-bg:#3d2f10;--warn-fg:#f0b34a;--bad-bg:#41181d}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0b1410;--card:#121f18;--ink:#e5f1ea;--muted:#8fa89a;--line:#233a2d;--brand:#1f9455;--brand-dark:#7fdca6;--chip:#182b21;--okbg:#173325;--ok:#4cd08a;--bad:#ff7b84;--warn:#f0a63a;--name:#cfe0ff;--p-ok-bg:#173a28;--p-ok-fg:#5fdc9a;--p-late-bg:#3d2f10;--p-late-fg:#f0b34a;--p-bad-bg:#41181d;--p-bad-fg:#ff8a92;--p-ex-bg:#1b2b4d;--p-ex-fg:#8fb2ff;--warn-bg:#3d2f10;--warn-fg:#f0b34a;--bad-bg:#41181d}
+:root[data-theme="light"]{color-scheme:light;--bg:#f5faf7;--card:#ffffff;--ink:#14283a;--muted:#66796e;--line:#d7eadf;--brand:#0e7a45;--brand-dark:#0a5a35;--chip:#e7f5ec;--okbg:#dff3e7;--ok:#0e7a45;--bad:#c62a3a;--warn:#c77800;--name:#14265c;--p-ok-bg:#dcf3e5;--p-ok-fg:#0e7a45;--p-late-bg:#fde9c4;--p-late-fg:#b86e00;--p-bad-bg:#fbd7dc;--p-bad-fg:#c62a3a;--p-ex-bg:#e3ecfb;--p-ex-fg:#2a55b0;--warn-bg:#fff3d6;--warn-fg:#8a5a00;--bad-bg:#fde7e5}
+h1,h2,h3{color:var(--brand-dark)}
+#hName,#sName,#rName{color:var(--name)}
+.pill.Present{background:var(--p-ok-bg);color:var(--p-ok-fg)}.pill.Late{background:var(--p-late-bg);color:var(--p-late-fg)}
+.pill.Absent{background:var(--p-bad-bg);color:var(--p-bad-fg)}.pill.Excused{background:var(--p-ex-bg);color:var(--p-ex-fg)}
+.banner.late{background:var(--warn-bg);color:var(--warn-fg)}.banner.closed{background:var(--bad-bg);color:var(--bad)}
+.warn{color:var(--warn)}
+.menuBtn b,.bnav button.on{color:var(--brand-dark)}
+.themeBtn{padding:6px 12px;border-radius:999px;font-size:13px}
+body{transition:background .2s,color .2s}
+
+.idc{width:54mm;height:85.6mm;max-width:100%;border:1px solid #0e7a45;border-radius:3mm;overflow:hidden;background:#fff;color:#14283a;display:flex;flex-direction:column;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;break-inside:avoid;margin:0 auto}
+.idc-h{background:#0e7a45;color:#fff;padding:2.5mm 3mm;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6mm;font-size:10pt}
+.idc-h div{display:flex;align-items:center;gap:1.5mm}
+.idc-h span{font-size:6pt;opacity:.92;line-height:1.2}
+.idc-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;padding:2mm 3mm;min-height:0;text-align:center}
+.idc-q{width:36mm;height:36mm;flex:none;background:#fff;position:relative}
+.idc-q img{width:100%;height:100%;image-rendering:pixelated;display:block}
+.idc-qc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34%;height:34%;border-radius:50%;background:#0e7a45;color:#fff;border:0.6mm solid #fff;box-shadow:0 0 0 0.3mm #0e7a45;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:7pt;font-weight:800}
+.idc-qc img{width:100%;height:100%;object-fit:cover;image-rendering:auto}
+.idc-ph{grid-column:1/-1;margin:10px 0 2px;break-after:avoid}
+.idc-pg{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,54mm);gap:3mm 4mm;justify-content:start;break-before:auto}
+#printArea .idc-pg:not(:first-of-type){break-before:page}
+.idc-i{width:100%;min-width:0;line-height:1.35;overflow-wrap:anywhere}
+.idc-n{font-size:11.5pt;font-weight:800;color:#14265c;line-height:1.2;margin-bottom:1mm}
+.idc-c{font-size:9pt;font-weight:600}
+.idc-f{background:#e7f5ec;color:#0a5a35;text-align:center;font-size:5.5pt;letter-spacing:.14em;padding:1.2mm;font-weight:700}
+.idc-t{display:inline-block;background:#dff3e7;color:#0a5a35;font-size:5.5pt;font-weight:800;letter-spacing:.1em;padding:.4mm 1.6mm;border-radius:1mm}
+.grp{border:1px solid #dfe7e2;border-radius:10px;margin-bottom:8px;padding:0 12px}
+.grp summary{cursor:pointer;padding:10px 0;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center}
+.grp summary>span:first-child{font-weight:700}
+.grp .scroll{margin-bottom:10px}
+body.restoring #login{display:none!important}
+.extra{display:none}body.extras .extra{display:block}
+body.isStaff .adminOnly{display:none!important}
+body.isStaff:not(.canEdit) .editOnly{display:none!important}
+.pwv{display:none}body.showpw .pwv{display:inline}body.showpw .pwm{display:none}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:6mm}
+  body.printing>*:not(#printArea){display:none!important}
+  body.printing #printArea{display:grid;grid-template-columns:repeat(3,54mm);gap:3mm 4mm;justify-content:center;background:#fff}
+  body.printing{background:#fff}
+  .idc,.idc *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- LOGIN -->
+<section id="login">
+  <div class="card">
+    <div style="text-align:right"><button class="themeBtn"></button></div>
+    <div style="text-align:center;margin:6px 0 14px"><div style="display:flex;justify-content:center"><svg viewBox="0 0 24 24" width="56" height="56" style="flex:none"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z" fill="#0f7a43"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-size:30px;font-weight:800;color:var(--brand-dark)">Attend<span style="color:#3dbb6f">ify</span></div><div class="muted" style="letter-spacing:.06em;font-size:12px">SMART ATTENDANCE. SIMPLE FUTURE.</div><div class="schoolBar" style="margin-top:6px;font-weight:700;color:var(--brand-dark)" hidden></div></div>
+    <div id="lgMenu"><h2 style="text-align:center;margin:0 0 4px">Welcome!</h2><p class="muted" style="text-align:center;margin-top:0">Please choose your account to continue.</p>
+      <button class="menuBtn" id="mAdm"><b>Admin Login</b><span class="muted">Manage users, attendance and reports.</span></button>
+      <button class="menuBtn" id="mSign"><b>Admin Sign Up</b><span class="muted">Create a new admin account to get started.</span></button>
+      <button class="menuBtn" id="mStu"><b>Student Login</b><span class="muted">View your attendance, fines and QR code.</span></button></div>
+    <h2 id="lgTitle" style="text-align:center;margin:0 0 12px"></h2>
+    <button id="lgBack" hidden style="margin-bottom:12px">← Back</button>
+    <div id="loginStudent" hidden>
+      <div class="row" style="margin-top:6px">
+        <input id="inStuId" placeholder="Student ID (e.g. STU-2026-001)" autocomplete="username" style="flex:1;min-width:200px">
+        <input id="inStuPin" type="password" placeholder="PIN" autocomplete="current-password" style="width:130px">
+        <button class="p" id="goStudent">Sign in</button>
+      </div>
+      <p class="bad" id="errStu" style="margin:8px 0 0"></p>
+    </div>
+    <div id="loginStaff" hidden>
+      <div class="row" style="margin-top:6px">
+        <input id="inStfId" placeholder="Staff ID (e.g. SC-01)" autocomplete="username" style="flex:1;min-width:160px">
+        <input id="inStfKey" type="password" placeholder="Access key" autocomplete="current-password" style="flex:1;min-width:150px">
+        <button class="p" id="goStaff">Sign in</button>
+      </div>
+      <p class="bad" id="errStf" style="margin:8px 0 0"></p>
+      <p class="muted">Student Council, Adviser and Secretary accounts can scan and record.</p>
+    </div>
+    <div id="signupBox" hidden>
+      <h3 style="margin:0 0 8px">Admin Sign Up</h3>
+      <div class="row"><input id="suName" placeholder="Full name" style="flex:1;min-width:170px"><input id="suId" placeholder="ID number" style="flex:1;min-width:130px"></div>
+      <div class="row" style="margin-top:8px"><input id="suKey" type="password" placeholder="Password (6+ characters)" style="flex:1;min-width:170px"><input id="suCode" type="password" placeholder="Admin access code" style="flex:1;min-width:150px"></div>
+      <div class="row" style="margin-top:8px"><button class="p" id="suBtn" style="width:100%">Create Account</button></div>
+      <p class="muted" id="suMsg"></p>
+    </div>
+    <button id="installBtn" class="p" hidden style="width:100%;margin-top:12px">Install Attendify on this phone</button>
+    <p id="installHint" class="muted" hidden style="margin:8px 0 0">On iPhone: open this page in Safari, tap Share, then “Add to Home Screen”.</p>
+    <p id="dbStatus" class="muted" style="margin:12px 0 0"></p>
+  </div>
+  <div class="card" id="setup" hidden>
+    <h3>First-time setup</h3>
+    <p class="muted" style="margin-top:0">There are no staff accounts yet. Create the first one. It can then add other staff and all students.</p>
+    <div class="row"><input id="fsName" placeholder="Full name" style="flex:1;min-width:170px"><input id="fsRole" list="roles" placeholder="Role: Admin = full access; anything else = scanner only" style="flex:1;min-width:150px"></div>
+    <div class="row" style="margin-top:8px"><input id="fsKey" type="password" placeholder="Access key (6+ chars)" style="flex:1;min-width:170px"><button class="p" id="fsBtn">Create &amp; sign in</button></div>
+    <p class="muted" id="fsMsg" style="margin-bottom:0"></p>
+  </div>
+</section>
+
+<!-- STUDENT -->
+<section id="student" hidden>
+  <header><h1 id="stTitle"></h1><button class="themeBtn"></button><button class="out">Sign out</button></header>
+  <div class="card">
+    <div class="schoolBar" style="font-weight:700;color:var(--brand-dark);margin-bottom:8px" hidden></div><div class="who"><div class="av" id="sAv"></div><div><h2 id="sName" style="margin:0"></h2><div class="muted" id="sMeta"></div><label class="muted" style="font-size:12px;display:block;margin-top:5px">Change my photo <input type="file" id="myPhoto" accept="image/*"></label><p class="muted" id="myPhotoMsg" style="margin:2px 0 0;font-size:12px"></p></div></div>
+    <div class="banner wait" id="sWin" hidden></div><p class="muted" id="sToday" style="margin:8px 0 0"></p>
+    <div class="stats">
+      <div class="stat"><b class="ok" id="sP">0</b><span>Present</span></div>
+      <div class="stat"><b class="warn" id="sL">0</b><span>Late</span></div><div class="stat"><b class="bad" id="sA">0</b><span>Absent</span></div>
+      <div class="stat"><b id="sF">₱0</b><span>Fines</span></div>
+    </div>
+    <div class="qr" id="sQR"></div>
+    <p class="muted" style="text-align:center;margin-bottom:0">Show this code to authorized personnel.</p>
+  </div>
+  <div class="card extra"><h3>My school ID</h3><div id="sId" style="overflow-x:auto"></div><div class="row" style="margin-top:10px"><button class="p" id="sPrint">Print / save my ID</button></div></div>
+  <div class="card extra"><h3>My fines &amp; payments</h3><div class="scroll"><table id="sLedger"></table></div><p class="muted" style="margin-bottom:0">To pay a fine, hand the amount to the Student Council or Adviser. They will record it here.</p></div>
+  <div class="card extra"><h3>My attendance history</h3><div class="scroll"><table id="sLog"></table></div></div>
+  <div class="card"><h3>Change my PIN</h3>
+    <div class="row"><input id="oldPin" type="password" placeholder="Current PIN" style="width:150px"><input id="newPin" type="password" placeholder="New PIN (4+ characters)" style="flex:1;min-width:170px"><button id="chgPin">Update</button></div>
+    <p class="muted" id="pinMsg" style="margin-bottom:0"></p>
+  </div>
+</section>
+
+<!-- STAFF -->
+<section id="staff" hidden>
+  <header><span><svg viewBox="0 0 24 24" width="30" height="30" style="flex:none"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z" fill="#0f7a43"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div style="flex:1"><h1 style="margin:0;font-size:18px;color:var(--brand-dark)">Attendify</h1><div class="muted" id="stfTitle" style="font-size:12px"></div></div><button class="themeBtn"></button><button class="out">Sign out</button></header>
+  <div class="schoolBar" style="font-weight:700;color:var(--brand-dark);margin:-6px 0 10px" hidden></div>
+  <nav class="bnav"><button class="nav on adminOnly" data-v="dash">🏠<span>Dashboard</span></button><button class="nav" data-v="scan">📷<span>Scanner</span></button><button class="nav editOnly" data-v="students">🎓<span>Students</span></button><button class="nav editOnly" data-v="classes">🏫<span>Classes</span></button><button class="nav adminOnly" data-v="staff">🧑‍💼<span>Staff</span></button><button class="nav editOnly" data-v="settings">⚙️<span>Settings</span></button></nav>
+
+  <div id="vdash">
+    <div class="banner closed" id="pwWarn" hidden>You are still using the default admin password. Open Add Students, then Accounts, and change your access key now.</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Overview</h3><span class="muted" id="dToday"></span></div><div class="tiles" id="dTiles"></div></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Today's Attendance</h3><button id="dAll">View all</button></div><p class="muted" style="margin:6px 0 10px">Grouped by grade level and section. Tap a group to see its students.</p><div id="dGroups"></div></div>
+    <div class="card adminOnly"><h3>Staff &amp; admin attendance today</h3><div class="scroll"><table id="dStaffAtt"></table></div><p class="muted" id="saMsg" style="margin:8px 0 0"></p></div>
+    <div class="card"><h3>Pending Payments</h3><div class="scroll"><table id="dPay"></table></div></div>
+  </div>
+  <div id="vscan" hidden>
+    <div class="card adminOnly"><h3>Attendance window</h3>
+      <div class="row"><input type="date" id="date"><input id="wTitle" placeholder="Event (e.g. Flag Ceremony)" style="flex:1;min-width:170px"></div>
+      <div class="row" style="margin-top:8px"><label class="muted">Opens</label><input type="time" id="wStart"><label class="muted">Late after</label><input type="time" id="wLate"><label class="muted">Closes</label><input type="time" id="wClose"></div>
+      <div class="row" style="margin-top:8px"><button class="p" id="wSave">Save window</button><button id="wCloseNow">Close &amp; mark absentees</button><button id="wClear">Remove window</button></div>
+      <p class="muted" id="wStatus" style="margin:10px 0 0;font-weight:600"></p><p class="muted" id="wMsg" style="margin:4px 0 0"></p>
+    </div>
+    <div class="card">
+      <div class="row">
+        <button id="camBtn" class="p">Open scanner</button><button id="flashBtn">⚡ Flash</button><button id="galBtn">Scan from gallery</button><input type="file" id="galFile" accept="image/*" hidden>
+        <input id="manual" placeholder="or type student ID e.g. STU-2026-001" style="flex:1;min-width:190px">
+        <button id="manualBtn">Find</button>
+      </div>
+      <p class="muted" id="camMsg"></p>
+      <video id="cam" playsinline hidden></video><canvas id="cv" hidden></canvas>
+    </div>
+    <div class="card" id="res" hidden style="text-align:center">
+      <div class="okbig">✓</div><h2 style="margin:8px 0 2px">Attendance Marked!</h2><p class="muted" style="margin-top:0">The student has been successfully checked in.</p>
+      <div class="who" style="text-align:left"><div class="av" id="rAv"></div><div><h3 id="rName" style="margin:0"></h3><div class="muted" id="rMeta"></div></div></div>
+      <div class="tile2"><span class="muted">Time In</span><br><b style="font-size:20px" id="rTime"></b> <span class="muted" id="rDate"></span></div>
+      <div class="tile2"><span class="muted">Status</span><br><span id="rStatus"></span></div>
+      <button class="p" id="rAgain" style="width:100%">Scan Another QR Code</button>
+      <button id="rMore" style="width:100%;margin-top:8px">Change status / add fine</button>
+      <button id="rBack" style="width:100%;margin-top:8px">Back to Dashboard</button>
+    </div>
+    <div class="card" id="hit" hidden>
+      <div id="toast"></div>
+      <div class="who"><div class="av" id="hAv"></div><div><h2 id="hName" style="margin:0"></h2><div class="muted" id="hMeta"></div></div></div>
+      <p class="muted" id="hToday" style="margin:8px 0"></p><p class="bad" id="hWarn" style="margin:6px 0"></p>
+      <div class="row"><button class="p" data-mark="Present">Present</button><button data-mark="Late">Late</button><button data-mark="Absent">Absent</button><button data-mark="Excused">Excused</button></div>
+      <h3 style="margin:16px 0 6px">Fines &amp; payments</h3>
+      <p class="muted" id="hBal" style="margin:0 0 8px"></p>
+      <div class="row"><input id="fnType" list="fineTypes" placeholder="Fine for (e.g. Littering)" style="flex:1;min-width:160px"><input id="fnAmt" type="number" min="1" placeholder="Amount ₱" style="width:120px"></div>
+      <div class="row" style="margin-top:8px"><input id="fnWhy" placeholder="Reason / details (e.g. threw wrapper in the hallway)" style="flex:1;min-width:190px"><button id="fnBtn">Add fine</button></div>
+      <datalist id="fineTypes"><option value="Littering"><option value="No ID"><option value="Improper uniform"><option value="Missed cleaning duty"><option value="Disrespect to staff"></datalist>
+      <div class="row adminOnly" style="margin-top:8px"><input id="pyAmt" type="number" min="1" placeholder="Paid ₱" style="width:110px"><select id="pyMethod"><option>Cash</option><option>Other</option></select><button class="p" id="pyBtn">Record payment</button><button id="payAll">Pay full balance</button></div>
+      <div class="scroll" style="margin-top:10px"><table id="hLedger"></table></div>
+    </div>
+  </div>
+
+  <div id="vclasses" hidden>
+    <div class="card"><h3>Browse by class</h3>
+      <p class="muted" style="margin-top:0">Pick a strand, then a grade level, then a section. Counts show how many students are in each.</p>
+      <input id="clsSearch" placeholder="Search a student name or ID" style="width:100%;margin-bottom:12px">
+      <div class="clsLbl">Strand</div><div class="chips" id="clsStrand"></div>
+      <div id="clsGradeBox" hidden><div class="clsLbl">Grade level</div><div class="chips" id="clsGrade"></div></div>
+      <div id="clsSecBox" hidden><div class="clsLbl">Section</div><div class="chips" id="clsSec"></div></div>
+    </div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0" id="clsTitle">All students</h3><button id="clsReset">Clear filters</button></div>
+      <p class="muted" id="clsSum" style="margin:6px 0 10px"></p>
+      <div class="scroll"><table id="clsTable"></table></div>
+    </div>
+  </div>
+  <div id="vsettings" hidden>
+    <div class="card editOnly"><h3>School days</h3>
+      <p class="muted" style="margin-top:0">Tap the days that have classes. Attendance can't be recorded on other days or on no-class dates, and absentees aren't marked.</p>
+      <div class="row" style="margin-bottom:10px"><label class="muted">Days per week</label><select id="sdCount"><option value="5">5 days (Mon–Fri)</option><option value="6">6 days (Mon–Sat)</option><option value="7">7 days (every day)</option><option value="custom">Custom (pick days below)</option></select><span class="muted" id="sdNote"></span></div>
+      <div class="chips" id="sdDays"></div>
+      <div class="clsLbl">No-class dates (holidays, suspensions)</div>
+      <div class="row"><input type="date" id="ncDate"><input id="ncNote" placeholder="Reason (optional)" style="flex:1;min-width:140px"><button id="ncAdd">Add date</button></div>
+      <div class="chips" id="ncList" style="margin-top:10px"></div>
+      <div class="row"><button class="p" id="sdSave">Save school days</button></div><p class="muted" id="sdMsg"></p>
+    </div>
+    <div class="card editOnly"><h3>School settings</h3>
+      <div class="row"><input id="stSchool" placeholder="School name" style="flex:1;min-width:200px"></div>
+      <div class="row" style="margin-top:8px"><input id="stProg" placeholder="Class / program and section (e.g. STEM 12-A)" style="flex:1;min-width:200px"></div>
+      <p class="muted" style="margin:10px 0 6px">New IDs start with letters or numbers of your choice:</p>
+      <div class="row"><input id="stPfxS" placeholder="Student IDs start with (e.g. SC- or 2026-)" style="flex:1;min-width:190px"><input id="stPfxT" placeholder="Staff IDs start with (e.g. SSC-)" style="flex:1;min-width:170px"></div>
+      <div class="row" style="margin-top:8px"><button class="p" id="stSave">Save settings</button></div>
+      <p class="muted" id="stMsg" style="margin-bottom:0"></p>
+    </div>
+    <div class="card adminOnly"><h3>Remove an account</h3>
+      <p class="muted" style="margin-top:0">Removes a student or staff account. It is not erased — find it under Recently removed below to restore it or delete it for good.</p>
+      <div class="row"><select id="rmSel" style="flex:1;min-width:220px"></select><button id="rmBtn">Remove</button></div>
+      <p class="muted" id="rmMsg" style="margin-bottom:0"></p>
+    </div>
+    <div class="card adminOnly"><h3>Backup &amp; recovery</h3>
+      <p class="muted" style="margin-top:0">Download a full backup regularly (before big changes, and at least weekly). If anything is ever deleted by accident, restore the most recent backup.</p>
+      <div class="row"><button class="p" id="bkDown">Download backup (.json)</button><button id="bkFile">Restore from backup file</button><input type="file" id="bkInput" accept="application/json" hidden></div>
+      <p class="muted" id="bkMsg"></p>
+    </div>
+    <div class="card adminOnly"><h3>Recently removed</h3>
+      <p class="muted" style="margin-top:0">Accounts removed with the button below are kept here, not erased, so they can be brought back. Their attendance, fines and payments are never deleted.</p>
+      <div class="scroll"><table id="trashList"></table></div>
+      <p class="muted" id="trashMsg" style="margin-bottom:0"></p>
+    </div>
+  </div>
+  <div id="vstudents" hidden>
+    <div class="card"><h3>Roster</h3><div class="scroll"><table id="roster"></table></div>
+      <div class="row" style="margin-top:10px"><button id="pwToggle" class="adminOnly">Show passwords</button><button id="qrBtn">Show ID cards</button><button id="resetBtn" class="adminOnly">Reset demo data</button></div>
+    </div>
+    <div class="card editOnly"><h3>Edit a student</h3>
+      <div class="row"><select id="edStu" style="flex:1;min-width:200px"></select></div>
+      <div class="row" style="margin-top:8px"><input id="edName" placeholder="Full name" style="flex:1;min-width:170px"></div>
+      <div class="row" style="margin-top:8px"><input id="edStrand" list="strandList" placeholder="Strand (e.g. STEM)" style="flex:1;min-width:130px"><input id="edSec" placeholder="Section (e.g. A)" style="flex:1;min-width:110px"><input id="edGrade" list="gradeList" inputmode="numeric" placeholder="Grade level (e.g. 12)" style="flex:1;min-width:130px"></div>
+      <div class="row" style="margin-top:8px"><label class="muted">Photo</label><input type="file" id="edPhoto" accept="image/*"></div>
+      <div class="row" style="margin-top:8px"><button class="p" id="edSave">Save changes</button></div>
+      <p class="muted" id="edMsg" style="margin-bottom:0">The student ID can't be changed, because their QR code holds it.</p>
+    </div>
+    <div class="card editOnly"><h3>Add a student</h3>
+      <div class="row"><input id="nsName" placeholder="Full name" style="flex:1;min-width:200px"></div>
+      <div class="row" style="margin-top:8px"><input id="nsStrand" list="strandList" placeholder="Strand (e.g. STEM)" style="flex:1;min-width:130px"><input id="nsSec" placeholder="Section (e.g. A)" style="flex:1;min-width:110px"><input id="nsGrade" list="gradeList" inputmode="numeric" placeholder="Grade level (e.g. 12)" style="flex:1;min-width:130px"></div>
+      <datalist id="strandList"><option value="STEM"><option value="ABM"><option value="HUMSS"><option value="GAS"><option value="TVL"></datalist><datalist id="gradeList"><option value="11"><option value="12"></datalist>
+      <div class="row" style="margin-top:8px"><input id="nsId" placeholder="Student ID (blank = auto)" style="flex:1;min-width:170px"><input id="nsPin" type="password" placeholder="PIN (4+ chars)" style="width:150px"><button class="p" id="nsBtn">Add student</button></div>
+      <div class="row" style="margin-top:8px"><label class="muted">Photo (optional)</label><input type="file" id="nsPhoto" accept="image/*"></div>
+      <p class="muted" id="nsMsg"></p>
+      </div>
+    <div class="card editOnly"><h3>Bulk add students from a file</h3>
+      <p class="muted" style="margin-top:0">Upload a CSV file listing many students at once. Columns: <b>name, strand, section, grade_level, student_id</b> (strand, section and grade level each get their own column). Leave the Student ID column blank and one is generated automatically, starting with whatever you set under School settings (currently “<b id="curPfx"></b>”). Each student's starting password is the last 4 digits of their Student ID. Tell them to change it after their first login.</p>
+      <div class="row"><button id="tplBtn">Download CSV template</button><button class="p" id="bulkFile">Choose CSV file</button><input type="file" id="bulkInput" accept=".csv,text/csv" hidden></div>
+      <div id="bulkPreview" hidden style="margin-top:10px">
+        <p class="muted" id="bulkSummary" style="margin:0 0 6px"></p>
+        <div class="scroll" style="max-height:220px"><table id="bulkTable"></table></div>
+        <div class="row" style="margin-top:10px"><button class="p" id="bulkImport">Import these students</button><button id="bulkCancel">Cancel</button></div>
+      </div>
+      <p class="muted" id="bulkMsg"></p>
+    </div>
+    <div class="card adminOnly"><h3>Student accounts</h3>
+      <p class="muted" style="margin-top:0">Set or reset a student's PIN:</p>
+      <div class="row"><select id="rsStu" style="flex:1;min-width:190px"></select><input id="rsPin" type="password" placeholder="New PIN (4+ characters)" style="width:200px"><button id="rsBtn">Set PIN</button></div>
+      <p class="muted" id="rsMsg"></p>
+      <p class="muted" style="margin:0 0 6px">Set a photo for the student selected above:</p><input type="file" id="rsPhoto" accept="image/*">
+    </div>
+  </div>
+  <div id="vstaff" hidden>
+    <div class="card adminOnly"><h3 style="margin-top:0">Add a staff member</h3>
+      <div class="row"><input id="nfId" placeholder="Staff ID" style="width:220px"><input id="nfName" placeholder="Full name" style="flex:1;min-width:170px"></div>
+      <div class="row" style="margin-top:8px"><input id="nfRole" list="roles" placeholder="Role: Admin = full access; anything else = scanner only" style="flex:1;min-width:170px"><input id="nfKey" type="password" placeholder="Access key (6+ chars)" style="width:190px"><button class="p" id="nfBtn">Add staff</button></div>
+      <datalist id="roles"><option value="Admin"><option value="Staff"><option value="SSC President"><option value="SSC Vice President"><option value="SSC Secretary"><option value="SSC Treasurer"><option value="SSC Officer"><option value="Adviser"></datalist>
+      <div class="row" style="margin-top:8px"><label class="muted">Photo (optional)</label><input type="file" id="nfPhoto" accept="image/*"></div>
+      <p class="muted" id="nfMsg"></p>
+    </div>
+    <div class="card adminOnly"><h3>Who can edit</h3>
+      <p class="muted" style="margin-top:0">Admins can always edit. Tick the staff or teachers you allow to edit student names, sections, photos, and the school settings. Everyone else can only scan and add fines.</p>
+      <div class="scroll"><table id="edList"></table></div><p class="muted" id="edPermMsg" style="margin-bottom:0"></p>
+    </div>
+    <div class="card adminOnly"><h3>My account</h3>
+      <p class="muted" style="margin-top:0">Change my staff access key:</p>
+      <div class="row"><input id="oldKey" type="password" placeholder="Current key" style="width:150px"><input id="newKey" type="password" placeholder="New key (6+ characters)" style="flex:1;min-width:170px"><button id="chgKey">Update</button></div>
+      <p class="muted" id="keyMsg" style="margin-bottom:0"></p>
+      <p class="muted" style="margin:12px 0 6px">Set a staff member's photo (for their ID card):</p><div class="row"><select id="phStf" style="flex:1;min-width:190px"></select><input type="file" id="stfPhoto" accept="image/*"></div><p class="muted" id="phMsg"></p>
+    </div>
+    <div class="card" id="qrSheet" hidden><div class="row" style="justify-content:space-between"><h3 style="margin:0">Student ID cards</h3><span class="row"><button class="p" id="printAll">Print students</button><button id="printStaff">Print staff</button></span></div>
+      <p class="muted">Each card has the student's QR code with their photo in the middle, their name, grade and section. Cards print grouped by section — or use “Print this section” on just one group. In the print window you can choose "Save as PDF". Cut along the green border.</p>
+      <div class="grid" id="qrGrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))"></div></div>
+  </div>
+
+  <div id="vrecords" hidden>
+    <div class="card"><div class="row" style="margin-bottom:8px"><button id="recBack">← Dashboard</button><h3 style="margin:0">Attendance records</h3></div><div class="scroll"><table id="log"></table></div>
+      <div class="row" style="margin-top:10px"><button id="csvBtn">Export CSV</button></div>
+    </div>
+  </div>
+</section>
+<p class="muted" style="text-align:center;margin:8px 0 24px">Attendify</p>
+</div>
+
+<script>
+/* No automatic fines. Late and Absent carry no fine; fines are added by hand. */
+const FINE={Present:0,Late:0,Absent:0,Excused:0};
+const HAS_DB=!!(SUPA.url&&SUPA.key);
+const KEY=HAS_DB?"qratt_live_v2":"qratt_v4";
+let loaded=!HAS_DB;
+const emptyDb=()=>({students:[],staff:[],records:[],fines:[],payments:[],windows:{}});
+const seed=()=>({students:[
+ {sid:"STU-2026-001",name:"Juan Dela Cruz",strand:"STEM 12-A",pin_hash:"e40db55e14fd3d8572a49278c23987b50f79927d729595c2406b4b6b7176a68b"},
+ {sid:"STU-2026-002",name:"Maria Santos",strand:"ABM 12-B",pin_hash:"4ea00ebbaab23a5533b8707e7f582e5557b8eb9018001219a4a37557b5ac5773"},
+ {sid:"STU-2026-003",name:"Andrei Lim",strand:"HUMSS 11-A",pin_hash:"d2e3ff7b55e470f4f90d442eb5c07aa79c9afd4c229b8e9d5d332801f6c74130"},
+ {sid:"STU-2026-004",name:"Kyla Reyes",strand:"STEM 11-C",pin_hash:"1396162e1c9ce60ada4827280712d5693c2a04f73e67b0e14aa69cd1a4a8f026"},
+ {sid:"STU-2026-005",name:"Paolo Mendoza",strand:"TVL 12-A",pin_hash:"e122696fa02f9658c17ecfe596ee20960aa86f60ee2218cc6c7c7dec07e79619"},
+ {sid:"STU-2026-006",name:"Bea Villanueva",strand:"HUMSS 12-C",pin_hash:"b4e2e4b39daba658f4c7b99b5b776ac3d33fabf351d904af38bb8f435f58053f"}
+],staff:[
+ {id:"ADMIN",name:"Administrator",role:"Admin",key_hash:"10a409d1b3b188002c3882fc9961b909fde574c684ebf3310012493f7c99efb8"},
+ {id:"SC-01",name:"Ella Ramos",role:"SSC Secretary",key_hash:"2bd588e1e08a910ed9e2de4304f60ac9d58a81b109590a2b246b52ba674420a2"},
+ {id:"SC-02",name:"Mr. Dizon",role:"Adviser",key_hash:"79063e489d1f3e56ae922d9ef80fc61aed9d251b74a8c3377114fad8fdd5edbf"},
+ {id:"SC-03",name:"Jomar Cruz",role:"SSC President",key_hash:"d42e08438d44f6c2a58edf8de9ea8196b7679b6dbbb8b4ca49a05bb1c494408f"}
+],records:[],fines:[],payments:[],windows:{}});
+const start=()=>HAS_DB?emptyDb():seed();
+let db; try{db=JSON.parse(localStorage.getItem(KEY))||start()}catch(e){db=start()}
+db.fines=db.fines||[];db.payments=db.payments||[];db.windows=db.windows||{};db.settings=db.settings||{};if(!db.studentsAll||!db.studentsAll.length)db.studentsAll=db.students.slice();
+if(!db.staffAll||!db.staffAll.length)db.staffAll=db.staff.slice();
+db.staffAtt=db.staffAtt||[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+
+/* ---------- live sync (Supabase) ---------- */
+let sb=null;
+function cleanUrl(u){
+  u=String(u||"").trim();
+  let m=/^https?:\/\/([a-z0-9-]+)\.supabase\.co/i.exec(u); if(m)return "https://"+m[1]+".supabase.co";
+  m=/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i.exec(u); if(m)return "https://"+m[1]+".supabase.co";
+  return u.replace(/\/+$/,"");
+}
+try{ if(HAS_DB&&window.supabase) sb=window.supabase.createClient(cleanUrl(SUPA.url),String(SUPA.key).trim()); }catch(e){}
+const LIVE=()=>!!sb;
+function setStatus(t,ok){const el=$("#dbStatus");if(el){el.textContent=t;el.className="muted "+(ok?"ok":"bad")}}
+async function pull(){
+  if(!sb)return;
+  try{
+    const q=(t,c)=>sb.from(t).select(c||"*").then(r=>r,e=>({error:{message:(e&&e.message)||String(e)}}));
+    const cols=(me&&me.type==="staff"&&me.admin)?"sid,name,strand,pin_hash,pin_changed,pin_plain":"sid,name,strand,pin_hash,pin_changed";
+    const qf=async()=>{let r=await q("staff","id,name,role,key_hash,can_edit");if(r.error)r=await q("staff","id,name,role,key_hash");return r};
+    const qs=async()=>{let r=await q("students",cols);if(r.error)r=await q("students","sid,name,strand,pin_hash");return r};
+    const names=["students","staff","records","payments","fines","windows","settings","staff_attendance"];
+    const R=await Promise.all([qs(),qf(),q("records"),q("payments"),q("fines"),q("windows"),q("settings"),q("staff_attendance")]);
+    const [st,sf,rc,py,fn,wn,se,sa]=R,failed=names.filter((n,i)=>R[i].error);
+    if(st.error||sf.error){setStatus("Can't read the database: "+(st.error||sf.error).message,false);return}
+    db.studentsAll=st.data||[];db.staffAll=sf.data||[];rescope();
+    if(!rc.error)db.records=rc.data||[];if(!py.error)db.payments=py.data||[];if(!fn.error)db.fines=fn.data||[];
+    if(!wn.error){db.windows={};(wn.data||[]).forEach(w=>db.windows[w.date]=w)}
+    if(!se.error){db.settings={};(se.data||[]).forEach(x=>db.settings[x.key]=x.value)}
+    if(!sa.error)db.staffAtt=sa.data||[];
+    loaded=true;
+    setStatus(failed.length?"Connected, but these tables are missing: "+failed.join(", ")+". Run attendify-setup.sql in Supabase.":"Connected \u2713 live database",!failed.length);
+    save();refreshUI();
+  }catch(e){setStatus("Can't reach the database: "+(e.message||e),false)}
+}
+async function pushRecord(r){ if(sb)try{await sb.from("records").upsert(r,{onConflict:"sid,date"})}catch(e){console.warn(e)} }
+async function pushPayment(sid,amount){ if(sb)try{await sb.from("payments").insert({sid,amount})}catch(e){console.warn(e)} }
+function refreshUI(){
+  checkSetup();paintSchool();
+  if(!me)return;
+  if(me.type==="student"&&find(me.sid))drawStudent();
+  if(me.type==="staff"){applyRole();drawRoster();drawLog();if(cur&&!$("#hit").hidden)show(cur);drawDash()}
+}
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const today=()=>new Date().toLocaleDateString("en-CA");
+const timeNow=()=>new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+const find=id=>db.students.find(s=>s.sid===String(id).trim().toUpperCase());
+const recs=id=>db.records.filter(r=>r.sid===id);
+const cnt=(id,st)=>recs(id).filter(r=>r.status===st).length;
+const autoFines=id=>recs(id).reduce((t,r)=>t+(FINE[r.status]||0),0);
+const manualFines=id=>db.fines.filter(f=>f.sid===id).reduce((t,f)=>t+Number(f.amount),0);
+const paidTotal=id=>db.payments.filter(p=>p.sid===id).reduce((t,p)=>t+Number(p.amount),0);
+const fines=id=>Math.max(0,autoFines(id)+manualFines(id)-paidTotal(id));
+const esc=x=>String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const peso=n=>"₱"+n.toFixed(2);
+/* ---------- school days & saved sign-in ---------- */
+const SKEY="attendify_session_v1";
+function clearSession(){try{localStorage.removeItem(SKEY)}catch(e){}}
+function saveSession(n){if(!me||(n!=="staff"&&n!=="student"))return;try{localStorage.setItem(SKEY,JSON.stringify({type:me.type,id:me.id,sid:me.sid,admin:me.admin,exp:Date.now()+12*3600*1000}))}catch(e){}}
+const DAYN=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const sdDays=()=>String((db.settings&&db.settings.school_days)||"1,2,3,4,5").split(",").filter(x=>x!=="").map(Number);
+function noClass(){try{return JSON.parse((db.settings&&db.settings.no_class)||"[]")}catch(e){return[]}}
+function schoolDayInfo(d){const nc=noClass().find(x=>x.d===d);if(nc)return{ok:false,why:"No class"+(nc.n?" ("+nc.n+")":"")};const g=new Date(d+"T00:00:00").getDay();return sdDays().includes(g)?{ok:true}:{ok:false,why:DAYN[g]+" is not a school day"}}
+const isSchoolDay=d=>schoolDayInfo(d).ok;
+const sdState={days:new Set(),nc:[]};
+function rescope(){db.students=(db.studentsAll||[]).filter(x=>!x.deleted_at);if(!db.staffAll)db.staffAll=db.staff.slice();db.staff=db.staffAll.filter(x=>!x.deleted_at)}
+function qr(el,text,size){el.innerHTML="";try{const q=qrcode(0,"H");q.addData(text);q.make();el.innerHTML=q.createImgTag(size||6,0)}catch(e){el.textContent=text}}
+
+/* ---------- auth ---------- */
+let me=null;
+async function sha(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+const hashOf=(id,secret)=>sha("qratt:"+String(id).toUpperCase()+":"+secret);
+async function pushHash(table,idcol,id,col,hash){ if(sb)try{await sb.from(table).update({[col]:hash}).eq(idcol,id)}catch(e){console.warn(e)} }
+async function fetchAcct(table,col,id){
+  if(!sb)return{row:table==="staff"?db.staff.find(x=>String(x.id).toUpperCase()===id):find(id)};
+  try{
+    let r=await sb.from(table).select(table==="students"?"sid,name,strand,pin_hash,pin_changed":"*").eq(col,id).maybeSingle();
+    if(r.error&&table==="students")r=await sb.from(table).select("sid,name,strand,pin_hash").eq(col,id).maybeSingle();
+    return r.error?{error:r.error.message}:{row:r.data||null};
+  }catch(e){return{error:(e&&e.message)||"network error"}}
+}
+async function loginStudent(){
+  const err=$("#errStu");err.textContent="";
+  const id=$("#inStuId").value.trim().toUpperCase().replace(/\s+/g,"-"),pin=$("#inStuPin").value;
+  if(!id||!pin){err.textContent="Enter your Student ID and PIN.";return}
+  err.textContent="Signing in\u2026";
+  const r=await fetchAcct("students","sid",id);
+  if(r.error){err.textContent="Can't reach the database: "+r.error;return}
+  const s=r.row;
+  if(!s){err.textContent="No student account with the ID "+id+".";return}
+  if(!s.pin_hash){err.textContent="No PIN is set for this account yet. Ask the Student Council.";return}
+  try{ if(await hashOf(s.sid,pin)!==s.pin_hash){err.textContent="Wrong PIN.";return} }
+  catch(e){err.textContent="Sign-in needs a secure (https) page.";return}
+  err.textContent="";if(!find(s.sid)){db.students.push(s);db.studentsAll.push(s)}
+  me={type:"student",sid:s.sid};$("#inStuPin").value="";screen("student");drawStudent();if(sb)pull();
+}
+async function loginStaff(){
+  const err=$("#errStf");err.textContent="";
+  const id=$("#inStfId").value.trim().toUpperCase().replace(/\s+/g,"-"),key=$("#inStfKey").value.trim().toUpperCase();
+  if(!id||!key){err.textContent="Enter your Staff ID and access key.";return}
+  err.textContent="Signing in\u2026";
+  const r=await fetchAcct("staff","id",id);
+  if(r.error){err.textContent="Can't reach the database: "+r.error;return}
+  const st=r.row;
+  if(!st){err.textContent="No admin or staff account with the ID "+id+".";return}
+  if(!st.key_hash){err.textContent="No access key is set for this account yet.";return}
+  try{ if(await hashOf(st.id,key)!==st.key_hash){err.textContent="Wrong access key.";return} }
+  catch(e){err.textContent="Sign-in needs a secure (https) page.";return}
+  err.textContent="";if(!db.staff.some(x=>x.id===st.id)){db.staff.push(st);db.staffAll.push(st)}
+  me={type:"staff",id:st.id,admin:isAdmin(st)};rescope();applyRole();$("#inStfKey").value="";screen("staff");await markStaffLogin(st);
+  $("#stfTitle").textContent=st.name+" \u00B7 "+(st.role||"Staff");
+  $("#date").value=today();loadWin();drawRoster();drawLog();go(me.admin?"dash":"scan");if(sb)pull();
+}
+$("#goStudent").onclick=loginStudent;$("#goStaff").onclick=loginStaff;
+["inStuId","inStuPin"].forEach(i=>$("#"+i).addEventListener("keydown",e=>{if(e.key==="Enter")loginStudent()}));
+["inStfId","inStfKey"].forEach(i=>$("#"+i).addEventListener("keydown",e=>{if(e.key==="Enter")loginStaff()}));
+
+$("#chgPin").onclick=async()=>{
+  const s=find(me.sid),o=$("#oldPin").value,n=$("#newPin").value,m=$("#pinMsg");
+  if(s.pin_changed){m.textContent="You already changed your password once. Ask the admin to reset it.";return}
+  if(n.length<4){m.textContent="New password must be at least 4 characters.";return}
+  if(await hashOf(s.sid,o)!==s.pin_hash){m.textContent="Current password is wrong.";return}
+  const h=await hashOf(s.sid,n),err=await updateRow("students","sid",s.sid,{pin_hash:h,pin_plain:n,pin_changed:true});
+  if(err){m.textContent="Could not save: "+err+" (ask the admin to run attendify-setup.sql)";return}
+  s.pin_hash=h;s.pin_changed=true;save();$("#oldPin").value="";$("#newPin").value="";m.textContent="Password changed. You can't change it again.";
+};
+$("#rsBtn").onclick=async()=>{
+  const s=find($("#rsStu").value),n=$("#rsPin").value,m=$("#rsMsg");
+  if(!s)return;
+  if(n.length<4){m.textContent="Password must be at least 4 characters.";return}
+  const h=await hashOf(s.sid,n),err=await updateRow("students","sid",s.sid,{pin_hash:h,pin_plain:n,pin_changed:false});
+  if(err){m.textContent="Could not save: "+err;return}
+  s.pin_hash=h;s.pin_plain=n;s.pin_changed=false;save();$("#rsPin").value="";m.textContent="Password set for "+s.name+". They can change it once.";
+};
+$("#chgKey").onclick=async()=>{
+  const st=db.staff.find(x=>x.id===me.id),o=$("#oldKey").value.trim().toUpperCase(),n=$("#newKey").value.trim().toUpperCase(),m=$("#keyMsg");
+  if(n.length<6){m.textContent="New key must be at least 6 characters.";return}
+  if(await hashOf(st.id,o)!==st.key_hash){m.textContent="Current key is wrong.";return}
+  st.key_hash=await hashOf(st.id,n);save();pushHash("staff","id",st.id,"key_hash",st.key_hash);
+  $("#oldKey").value="";$("#newKey").value="";m.textContent="Access key updated.";
+};
+function fillReset(){
+  const sel=$("#rsStu"),v=sel.value;sel.innerHTML="";
+  db.students.forEach(s=>sel.add(new Option(s.name+" \u2014 "+s.sid,s.sid)));
+  if(v)sel.value=v;
+  fillPeople();fillStaffPick();fillEdit();drawEditors();drawTrash();
+}
+$$(".out").forEach(b=>b.onclick=()=>{me=null;rescope();stopCam();screen("login")});
+function screen(n){if(n==="login")clearSession();else saveSession(n);["login","student","staff"].forEach(x=>$("#"+x).hidden=x!==n);if(n!=="staff"){stopCam();document.body.classList.remove("isStaff","canEdit")}if(n==="login")applyMode()}
+
+
+/* ---------- add / remove people ---------- */
+function flash(el,msg,ok){el.textContent=msg;el.className="muted "+(ok?"ok":"bad")}
+async function insertRow(table,row){
+  if(!sb)return null;
+  try{const r=await sb.from(table).insert(row);return r.error?r.error.message:null}catch(e){return e.message||"network error"}
+}
+async function deleteRow(table,col,val){
+  if(!sb)return null;
+  try{const r=await sb.from(table).delete().eq(col,val);return r.error?r.error.message:null}catch(e){return e.message||"network error"}
+}
+async function softDelete(table,col,val){
+  const err=await updateRow(table,col,val,{deleted_at:new Date().toISOString()});
+  return err&&/deleted_at/i.test(err)?await deleteRow(table,col,val):err;
+}
+const DEF_PFX={student_prefix:"SC-",staff_prefix:"SSC-"};
+const pfx=k=>(db.settings&&k in db.settings)?db.settings[k]:DEF_PFX[k];
+function nextId(ids,prefix,pad){
+  const re=new RegExp("^"+prefix.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(\\d+)$");let max=0;
+  ids.forEach(i=>{const m=re.exec(String(i).toUpperCase());if(m)max=Math.max(max,+m[1])});
+  return (prefix+String(max+1).padStart(pad,"0")).toUpperCase();
+}
+function nextStudentId(){return nextId(db.students.map(x=>x.sid),pfx("student_prefix"),3)}
+function nextStaffId(){return nextId(db.staff.map(x=>x.id),pfx("staff_prefix"),2)}
+function fillPeople(){
+  $("#nsId").placeholder="Student ID (blank = "+nextStudentId()+")";
+  $("#nfId").placeholder="Staff ID (blank = "+nextStaffId()+")";
+  const sel=$("#rmSel"),v=sel.value;sel.innerHTML="";
+  db.students.forEach(s=>sel.add(new Option("Student: "+s.name+" \u2014 "+s.sid,"s:"+s.sid)));
+  db.staff.forEach(s=>sel.add(new Option("Staff: "+s.name+" \u2014 "+s.id,"t:"+s.id)));
+  if(v)sel.value=v;
+}
+$("#nsBtn").onclick=async()=>{
+  const m=$("#nsMsg");
+  const sid=($("#nsId").value.trim()||nextStudentId()).toUpperCase().replace(/\s+/g,"-");
+  const name=$("#nsName").value.trim(),sd=$("#nsStrand").value.trim(),sc=$("#nsSec").value.trim(),gr=normGrade($("#nsGrade").value),pin=$("#nsPin").value;
+  if(!name){flash(m,"Enter the student's full name.");return}
+  if(!sd||!sc||!gr){flash(m,"Fill in the strand, section and grade level.");return}
+  const strand=composeClass(sd,gr,sc);
+  if(db.students.some(x=>x.sid===sid)){flash(m,sid+" already exists. Use a different ID.");return}
+  if(pin.length<4){flash(m,"PIN must be at least 4 characters.");return}
+  let hash;try{hash=await hashOf(sid,pin)}catch(e){flash(m,"Adding accounts needs a secure (https) page.");return}
+  const row={sid,name,strand,pin_hash:hash,pin_plain:pin,pin_changed:false};const pf=$("#nsPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH[sid]=row.photo}catch(e){}}
+  const err=await insertRow("students",row);
+  if(err){flash(m,"Could not save to the database: "+err);return}
+  db.students.push(row);db.studentsAll.push(row);db.students.sort((a,b)=>a.sid.localeCompare(b.sid));save();
+  ["nsId","nsName","nsPin","nsPhoto"].forEach(i=>$("#"+i).value="");
+  drawRoster();flash(m,"Added "+name+" ("+sid+") to "+strand+". Their QR code is under \u201CShow ID cards\u201D.",true);
+};
+$("#nfBtn").onclick=async()=>{
+  const m=$("#nfMsg");
+  const id=($("#nfId").value.trim()||nextStaffId()).toUpperCase().replace(/\s+/g,"-");
+  const name=$("#nfName").value.trim(),role=$("#nfRole").value.trim(),key=$("#nfKey").value.trim().toUpperCase();
+  if(!name||!role){flash(m,"Enter the staff member's name and role.");return}
+  if(db.staff.some(x=>x.id.toUpperCase()===id)){flash(m,id+" already exists. Use a different ID.");return}
+  if(key.length<6){flash(m,"Access key must be at least 6 characters.");return}
+  let hash;try{hash=await hashOf(id,key)}catch(e){flash(m,"Adding accounts needs a secure (https) page.");return}
+  const row={id,name,role,key_hash:hash};const pf=$("#nfPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH["T:"+id]=row.photo}catch(e){}}
+  const err=await insertRow("staff",row);
+  if(err){flash(m,"Could not save to the database: "+err);return}
+  db.staff.push(row);db.staffAll.push(row);db.staff.sort((a,b)=>a.id.localeCompare(b.id));save();
+  ["nfId","nfName","nfRole","nfKey","nfPhoto"].forEach(i=>$("#"+i).value="");
+  drawRoster();flash(m,"Added "+name+" ("+id+"). They can sign in with that ID and key.",true);
+};
+let rmArm=null;
+$("#rmSel").onchange=()=>{rmArm=null;$("#rmBtn").textContent="Remove"};
+$("#rmBtn").onclick=async()=>{
+  const v=$("#rmSel").value,m=$("#rmMsg"),btn=$("#rmBtn");
+  if(!v)return;
+  if(rmArm!==v){rmArm=v;btn.textContent="Click again to confirm";setTimeout(()=>{if(rmArm===v){rmArm=null;btn.textContent="Remove"}},4000);return}
+  rmArm=null;btn.textContent="Remove";
+  const t=v[0],id=v.slice(2);
+  if(t==="t"){
+    if(id===me.id){flash(m,"You can't remove the account you're signed in with.");return}
+    if(db.staff.length<=1){flash(m,"At least one staff account must remain.");return}
+    const err=await softDelete("staff","id",id);
+    if(err){flash(m,"Could not remove: "+err);return}
+    const row=db.staffAll.find(x=>x.id===id);if(row)row.deleted_at=new Date().toISOString();
+    db.staff=db.staff.filter(x=>x.id!==id);
+  }else{
+    const err=await softDelete("students","sid",id);
+    if(err){flash(m,"Could not remove: "+err);return}
+    const row=db.studentsAll.find(x=>x.sid===id);if(row)row.deleted_at=new Date().toISOString();
+    db.students=db.students.filter(x=>x.sid!==id);
+    if(cur&&cur.sid===id){cur=null;show(null)}
+  }
+  save();drawRoster();drawLog();drawTrash();flash(m,"Removed "+id+". Their attendance, fines and payments were kept, and you can restore the account any time from Recently removed.",true);
+};
+
+
+function checkSetup(){$("#setup").hidden=true;if(!$("#login").hidden)applyMode()}
+$("#fsBtn").onclick=async()=>{
+  const m=$("#fsMsg"),name=$("#fsName").value.trim(),role=$("#fsRole").value.trim(),key=$("#fsKey").value.trim().toUpperCase();
+  if(db.staff.length){flash(m,"A staff account already exists. Please sign in.");return}
+  if(!name||!role){flash(m,"Enter your name and role.");return}
+  if(key.length<6){flash(m,"Access key must be at least 6 characters.");return}
+  const id=nextStaffId();
+  let hash;try{hash=await hashOf(id,key)}catch(e){flash(m,"Setup needs a secure (https) page.");return}
+  const row={id,name,role,key_hash:hash};const pf=$("#nfPhoto").files[0];if(pf){try{row.photo=await resizePhoto(pf);PH["T:"+id]=row.photo}catch(e){}}
+  const err=await insertRow("staff",row);
+  if(err){flash(m,"Could not save to the database: "+err);return}
+  db.staff.push(row);db.staffAll.push(row);save();
+  ["fsName","fsRole","fsKey"].forEach(i=>$("#"+i).value="");
+  me={type:"staff",id};screen("staff");
+  $("#stfTitle").textContent=name+" \u00B7 "+role;$("#date").value=today();loadWin();drawRoster();drawLog();go("dash");
+};
+
+
+/* ---------- attendance window ---------- */
+const staffName=()=>(me&&db.staff.find(x=>x.id===me.id)||{}).name||"";
+const hm=t=>{const p=String(t||"").split(":");return (+p[0]||0)*60+(+p[1]||0)};
+const left=m=>{const x=Math.max(0,Math.round(m*60));return Math.floor(x/60)+"m "+String(x%60).padStart(2,"0")+"s"};
+function winState(d){
+  const sdi=schoolDayInfo(d);if(!sdi.ok)return{kind:"closed",nsd:true,text:sdi.why+". Attendance is closed."};
+  const w=db.windows[d];if(!w)return null;const T=w.title||"Attendance";
+  if(w.closed||d<today())return{kind:"closed",text:T+": time's up. Attendance is closed."};
+  if(d>today())return{kind:"wait",text:T+": opens on "+d+" at "+w.start_t};
+  const D=new Date(),n=D.getHours()*60+D.getMinutes()+D.getSeconds()/60,o=hm(w.start_t),l=hm(w.late_t),c=hm(w.close_t);
+  if(n<o)return{kind:"wait",text:T+": opens at "+w.start_t+" (in "+left(o-n)+")"};
+  if(n<l)return{kind:"ontime",text:T+": OPEN. On time until "+w.late_t+", closes at "+w.close_t+" ("+left(c-n)+" left)"};
+  if(n<c)return{kind:"late",text:T+": LATE. Closes at "+w.close_t+" ("+left(c-n)+" left)"};
+  return{kind:"closed",text:T+": time's up (closed at "+w.close_t+")."};
+}
+function applyGate(){
+  if(!cur||!$("#date"))return;const st=winState($("#date").value||today()),closed=!!st&&st.kind==="closed";
+  $("#hWarn").textContent=closed?(st.nsd?st.text:"Time's up: attendance is closed for this date."):"";
+  document.querySelectorAll('[data-mark="Present"],[data-mark="Late"]').forEach(b=>b.disabled=closed);
+}
+function tick(){
+  const d=$("#date").value||today(),st=winState(d),el=$("#wStatus");
+  el.textContent=st?st.text:"No attendance window set for "+d+" (no time limit).";el.className="muted "+(st?(st.kind==="closed"?"bad":st.kind==="late"?"":"ok"):"");
+  if(me&&me.type==="student"){const t=winState(today()),b=$("#sWin");b.hidden=!t;if(t){b.textContent=t.text;b.className="banner "+t.kind}}
+  applyGate();
+}
+setInterval(tick,1000);
+function loadWin(){const w=db.windows[$("#date").value]||{};$("#wTitle").value=w.title||"";$("#wStart").value=w.start_t||"";$("#wLate").value=w.late_t||"";$("#wClose").value=w.close_t||"";tick()}
+async function upsertRows(t,rows,c){if(!sb)return null;try{const r=await sb.from(t).upsert(rows,{onConflict:c});return r.error?r.error.message:null}catch(e){return e.message||"network error"}}
+async function updateRow(t,col,val,patch){if(!sb)return null;try{const r=await sb.from(t).update(patch).eq(col,val);return r.error?r.error.message:null}catch(e){return e.message||"network error"}}
+$("#wSave").onclick=async()=>{
+  const d=$("#date").value||today(),m=$("#wMsg"),w={date:d,title:$("#wTitle").value.trim(),start_t:$("#wStart").value,late_t:$("#wLate").value,close_t:$("#wClose").value,closed:false,by:staffName()};
+  if(!w.start_t||!w.late_t||!w.close_t||hm(w.start_t)>hm(w.late_t)||hm(w.late_t)>hm(w.close_t)){flash(m,"Set all three times so Opens \u2264 Late after \u2264 Closes.");return}
+  const err=await upsertRows("windows",w,"date");if(err){flash(m,"Could not save: "+err);return}
+  db.windows[d]=w;save();tick();flash(m,"Window saved for "+d+".",true);
+};
+$("#wClear").onclick=async()=>{const d=$("#date").value||today(),err=await deleteRow("windows","date",d);if(err){flash($("#wMsg"),"Could not remove: "+err);return}delete db.windows[d];save();loadWin();flash($("#wMsg"),"Window removed.",true)};
+let armClose=false;
+$("#wCloseNow").onclick=async()=>{
+  const b=$("#wCloseNow"),d=$("#date").value||today(),m=$("#wMsg");
+  if(!isSchoolDay(d)){flash(m,schoolDayInfo(d).why+", so no one was marked absent.");return}
+  if(!armClose){armClose=true;b.textContent="Click again to confirm";setTimeout(()=>{armClose=false;b.textContent="Close & mark absentees"},4000);return}
+  armClose=false;b.textContent="Close & mark absentees";
+  const by=staffName(),t=timeNow(),miss=db.students.filter(x=>!db.records.some(r=>r.sid===x.sid&&r.date===d)).map(x=>({sid:x.sid,name:x.name,date:d,time:t,status:"Absent",by}));
+  const w=Object.assign({date:d,title:"",start_t:"",late_t:"",close_t:"",by},db.windows[d]||{},{closed:true});
+  let err=miss.length?await upsertRows("records",miss,"sid,date"):null;if(!err)err=await upsertRows("windows",w,"date");
+  if(err){flash(m,"Could not save: "+err);return}
+  miss.forEach(r=>db.records.push(r));db.windows[d]=w;save();tick();drawRoster();drawLog();flash(m,"Closed. "+miss.length+" student(s) with no record were marked Absent.",true);
+};
+
+document.querySelectorAll("[data-mark]").forEach(b=>{const f=FINE[b.dataset.mark];b.textContent=b.dataset.mark+(f?" (₱"+f+")":"")});
+/* ---------- fines & payments ---------- */
+function ledger(sid){
+  const rows=[...recs(sid).filter(r=>FINE[r.status]).map(r=>({d:r.date,l:r.status+" (auto)",a:FINE[r.status],b:r.by})),
+    ...db.fines.filter(f=>f.sid===sid).map(f=>({d:f.date,l:(f.title||"Fine")+(f.reason?" — "+f.reason:""),a:+f.amount,b:f.by})),
+    ...db.payments.filter(p=>p.sid===sid).map(p=>({d:new Date(p.at).toLocaleDateString("en-CA"),l:"Payment ("+(p.method||"Cash")+")",a:-p.amount,b:p.by}))]
+    .sort((x,y)=>String(y.d).localeCompare(String(x.d))).slice(0,15);
+  return "<tr><th>Date</th><th>Item</th><th>Amount</th><th>By</th></tr>"+(rows.length?rows.map(r=>`<tr><td>${esc(r.d)}</td><td>${esc(r.l)}</td><td class="${r.a<0?"ok":"bad"}">${r.a<0?"\u2212":"+"}${peso(Math.abs(r.a))}</td><td>${esc(r.b)}</td></tr>`).join(""):"<tr><td colspan='4' class='muted'>No fines or payments yet.</td></tr>");
+}
+const FINE_TYPES={"Littering":50,"No ID":20,"Improper uniform":30,"Missed cleaning duty":30,"Disrespect to staff":50};
+$("#fnType").addEventListener("input",()=>{const a=FINE_TYPES[$("#fnType").value.trim()];if(a&&!$("#fnAmt").value)$("#fnAmt").value=a});
+$("#fnBtn").onclick=async()=>{
+  if(!cur)return;const title=$("#fnType").value.trim(),why=$("#fnWhy").value.trim(),amt=Math.round(+$("#fnAmt").value*100)/100;
+  if(!title||!(amt>0)){show(cur,"Enter what the fine is for and the amount.",false);return}
+  const row={sid:cur.sid,title,reason:why,amount:amt,date:today(),by:staffName()},err=await insertRow("fines",row);
+  if(err){show(cur,"Could not save: "+err+(/title/i.test(err)?" (run supabase-update-v3.sql first)":""),false);return}
+  db.fines.push(row);save();["fnType","fnWhy","fnAmt"].forEach(i=>$("#"+i).value="");show(cur,"Fine added: "+title+", "+peso(amt)+".");drawRoster();
+};
+async function pay(amt){
+  if(!cur)return;if(!(amt>0)){show(cur,"Enter a payment amount.",false);return}
+  if(amt>fines(cur.sid)+0.001){show(cur,"That is more than the balance ("+peso(fines(cur.sid))+").",false);return}
+  const row={sid:cur.sid,amount:amt,method:$("#pyMethod").value,by:staffName(),at:new Date().toISOString()},err=await insertRow("payments",row);
+  if(err){show(cur,"Could not save: "+err,false);return}
+  db.payments.push(row);save();$("#pyAmt").value="";show(cur,"Payment of "+peso(amt)+" recorded ("+row.method+").");drawRoster();
+}
+$("#pyBtn").onclick=()=>pay(Math.round(+$("#pyAmt").value*100)/100);
+$("#payAll").onclick=()=>cur&&pay(fines(cur.sid));
+
+/* ---------- photos ---------- */
+const PH={};
+const ini=n=>String(n||"?").split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase();
+function resizePhoto(file,max=200){return new Promise((ok,no)=>{
+  const fr=new FileReader();fr.onerror=no;
+  fr.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{
+    const c=document.createElement("canvas");c.width=c.height=max;const side=Math.min(im.width,im.height);
+    c.getContext("2d").drawImage(im,(im.width-side)/2,(im.height-side)/2,side,side,0,0,max,max);ok(c.toDataURL("image/jpeg",.7))};im.src=fr.result};
+  fr.readAsDataURL(file)})}
+async function getPhoto(id,staff){
+  const k=(staff?"T:":"")+id,row=staff?db.staff.find(x=>x.id===id):find(id);
+  if(row&&row.photo)return row.photo;if(PH[k]!==undefined)return PH[k];if(!sb)return "";
+  try{const r=await sb.from(staff?"staff":"students").select("photo").eq(staff?"id":"sid",id).maybeSingle();PH[k]=(r.data&&r.data.photo)||""}catch(e){PH[k]=""}
+  return PH[k];
+}
+async function paintAvatar(el,s){
+  const staff=!s.sid,id=staff?s.id:s.sid;
+  el.dataset.sid=id;el.textContent=ini(s.name);el.style.backgroundImage="";
+  const p=await getPhoto(id,staff);if(p&&el.dataset.sid===id){el.style.backgroundImage="url('"+p+"')";el.textContent=""}
+}
+async function setPhoto(id,file,staff){
+  let url;try{url=await resizePhoto(file)}catch(e){return "could not read that image"}
+  const err=await updateRow(staff?"staff":"students",staff?"id":"sid",id,{photo:url});if(err)return err;
+  PH[(staff?"T:":"")+id]=url;const row=staff?db.staff.find(x=>x.id===id):find(id);if(row)row.photo=url;save();return null;
+}
+$("#rsPhoto").onchange=async e=>{const f=e.target.files[0],sid=$("#rsStu").value;if(!f||!sid)return;const err=await setPhoto(sid,f);e.target.value="";flash($("#rsMsg"),err?"Photo not saved: "+err:"Photo saved.",!err);if(cur&&cur.sid===sid)paintAvatar($("#hAv"),cur)};
+$("#myPhoto").onchange=async e=>{
+  const f=e.target.files[0];if(!f||!me||me.type!=="student")return;
+  const err=await setPhoto(me.sid,f);e.target.value="";
+  flash($("#myPhotoMsg"),err?"Photo not saved: "+err:"Photo saved \u2713",!err);
+  if(!err){const s=find(me.sid);paintAvatar($("#sAv"),s);$("#sId").innerHTML="";$("#sId").appendChild(idCard(s))}
+};
+
+
+/* ---------- Attendify: sign-up, dashboard, scan result ---------- */
+const SCHOOL_NAME="Senior High School"; /* CHANGE to your school's name (printed on the ID cards) */
+const ADMIN_CODE="SSC-ADMIN-2026"; /* CHANGE THIS before sharing the link */
+const pill=x=>`<span class="pill ${esc(x)}">${esc(x)}</span>`;
+function showLogin(w){["lgMenu","loginStudent","loginStaff","signupBox"].forEach(i=>$("#"+i).hidden=i!==w);$("#lgBack").hidden=true;$("#lgTitle").textContent={loginStudent:"Student Login",loginStaff:"Admin Login",signupBox:"Admin Sign Up"}[w]||""}
+const isAdminUrl=()=>/\/admin\/?$/i.test(location.pathname)||/^#(admin|staff)$/i.test(location.hash);
+function applyMode(){
+  if(!isAdminUrl()){showLogin("loginStudent");return}
+  showLogin(loaded&&db.staff.length===0?"signupBox":"loginStaff");
+}
+async function staffExists(){
+  if(!sb)return db.staff.length>0;
+  try{const r=await sb.from("staff").select("id",{count:"exact",head:true});return r.error?true:(r.count||0)>0}catch(e){return true}
+}
+$("#mAdm").onclick=()=>showLogin("loginStaff");$("#mStu").onclick=()=>showLogin("loginStudent");$("#mSign").onclick=()=>showLogin("signupBox");$("#lgBack").onclick=()=>showLogin("lgMenu");
+$("#suBtn").onclick=async()=>{
+  const m=$("#suMsg"),name=$("#suName").value.trim(),id=$("#suId").value.trim().toUpperCase().replace(/\s+/g,"-"),key=$("#suKey").value.trim().toUpperCase();
+  if($("#suCode").value.trim()!==ADMIN_CODE){flash(m,"Wrong admin access code.");return}
+  if(await staffExists()){flash(m,"An admin account already exists. Ask your admin to add you under Add Students.");applyMode();return}
+  if(!name||!id){flash(m,"Enter your full name and ID number.");return}
+  if(db.staff.some(x=>x.id.toUpperCase()===id)){flash(m,id+" already has an account.");return}
+  if(key.length<6){flash(m,"Password must be at least 6 characters.");return}
+  let hash;try{hash=await hashOf(id,key)}catch(e){flash(m,"Sign-up needs a secure (https) page.");return}
+  const row={id,name,role:"Admin",key_hash:hash},err=await insertRow("staff",row);
+  if(err){flash(m,"Could not save: "+err);return}
+  db.staff.push(row);db.staffAll.push(row);save();["suName","suId","suKey","suCode"].forEach(i=>$("#"+i).value="");
+  me={type:"staff",id,admin:true};applyRole();screen("staff");await markStaffLogin(row);$("#stfTitle").textContent=name+" \u00B7 Admin";$("#date").value=today();loadWin();drawRoster();drawLog();go("dash");
+};
+function go(v){$$(".nav").forEach(x=>x.classList.toggle("on",x.dataset.v===v));["dash","scan","students","classes","staff","settings","records"].forEach(k=>$("#v"+k).hidden=k!==v);if(v!=="scan")stopCam();if(v==="dash")drawDash();if(v==="settings")fillSettings();if(v==="classes")drawClasses();window.scrollTo(0,0)}
+const dOpen={};
+function drawTodayGroups(r){
+  const by={};r.forEach(x=>by[x.sid]=x);const g={};
+  db.students.forEach(x=>{const c=parseClass(x.strand),k=[c.strand,c.grade,c.sec].join("|");(g[k]=g[k]||{c,list:[]}).list.push(x)});
+  const keys=Object.keys(g).sort((a,b)=>{const x=g[a],y=g[b];return x.c.strand.localeCompare(y.c.strand)||(+x.c.grade||99)-(+y.c.grade||99)||x.c.sec.localeCompare(y.c.sec)});
+  if(!keys.length){$("#dGroups").innerHTML="<p class='muted'>No students yet.</p>";return}
+  $("#dGroups").innerHTML=keys.map(k=>{
+    const {c,list}=g[k],n=t=>list.filter(x=>by[x.sid]&&by[x.sid].status===t).length,none=list.filter(x=>!by[x.sid]).length,open=k in dOpen?dOpen[k]:keys.length<=2;
+    const rows=list.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const q=by[x.sid];return `<tr><td>${esc(x.name)}</td><td>${esc(x.sid)}</td><td>${q?esc(q.time):"\u2014"}</td><td>${q?pill(q.status):"<span class='muted'>Not yet</span>"}</td></tr>`}).join("");
+    return `<details class="grp" data-k="${esc(k)}"${open?" open":""}><summary><span>${esc(c.strand)} \u00B7 ${esc(gLbl(c.grade))} \u00B7 ${c.sec?"Section "+esc(c.sec):"No section"}</span><span class="muted">${list.length} student${list.length===1?"":"s"}</span><span class="ok">Present ${n("Present")}</span><span class="warn">Late ${n("Late")}</span><span class="bad">Absent ${n("Absent")}</span><span class="muted">Not yet ${none}</span></summary><div class="scroll"><table><tr><th>Name</th><th>ID</th><th>Time</th><th>Status</th></tr>${rows}</table></div></details>`}).join("");
+}
+$("#dGroups").addEventListener("toggle",e=>{const d=e.target;if(d.dataset&&d.dataset.k)dOpen[d.dataset.k]=d.open},true);
+function drawDash(){
+  if(!me||me.type!=="staff")return;
+  const d=today(),T=db.students.length,r=db.records.filter(x=>x.date===d),c=k=>r.filter(x=>x.status===k).length,pct=n=>T?(n/T*100).toFixed(1)+"%":"0%";
+  const pend=db.students.map(x=>({s:x,b:fines(x.sid)})).filter(x=>x.b>0);
+  const me2=db.staff.find(x=>x.id===me.id);$("#pwWarn").hidden=!(me2&&me2.key_hash===DEFAULT_ADMIN_HASH);
+  {const nsd=schoolDayInfo(d);$("#dToday").textContent="Today, "+d+(nsd.ok?"":" \u00B7 "+nsd.why)}
+  drawStaffAtt();
+  $("#dTiles").innerHTML=[["Total Students",T,"All students",""],["Present Today",c("Present"),pct(c("Present")),"ok"],["Absent Today",c("Absent"),pct(c("Absent")),"bad"],["Late Today",c("Late"),pct(c("Late")),"warn"],["Pending Payments",peso(pend.reduce((t,x)=>t+x.b,0)),pend.length+" unpaid",""]]
+    .map(t=>`<div class="stat"><span>${t[0]}</span><b class="${t[3]}" style="font-size:22px">${t[1]}</b><span style="text-transform:none">${t[2]}</span></div>`).join("");
+  drawTodayGroups(r);
+  $("#dPay").innerHTML="<tr><th>ID</th><th>Name</th><th>Amount</th><th></th></tr>"+(pend.length?pend.slice(0,8).map(x=>`<tr><td>${esc(x.s.sid)}</td><td>${esc(x.s.name)}</td><td>${peso(x.b)}</td><td><button class="p" data-paid="${esc(x.s.sid)}">Mark as Paid</button></td></tr>`).join(""):"<tr><td colspan='4' class='muted'>No pending payments.</td></tr>");
+}
+$("#dAll").onclick=()=>go("records");$("#recBack").onclick=()=>go("dash");
+document.addEventListener("click",async e=>{const b=e.target.closest("[data-paid]");if(!b)return;cur=find(b.dataset.paid);if(!cur)return;await pay(fines(cur.sid));cur=null;$("#hit").hidden=true;drawDash()});
+function showResult(s,rec){cur=s;$("#hit").hidden=true;$("#res").hidden=false;$("#rName").textContent=s.name;$("#rMeta").textContent=s.sid+" \u00B7 "+s.strand;$("#rTime").textContent=rec.time;$("#rDate").textContent=rec.date;$("#rStatus").innerHTML=pill(rec.status);paintAvatar($("#rAv"),s)}
+function autoMark(s){
+  const date=$("#date").value||today(),st=winState(date);
+  if(st&&st.kind==="closed"){show(s,st.nsd?st.text:"Time's up: attendance is closed for "+date+".",false);return}
+  const rec={sid:s.sid,name:s.name,date,time:timeNow(),status:st&&st.kind==="late"?"Late":"Present",by:staffName()};
+  const i=db.records.findIndex(r=>r.sid===s.sid&&r.date===date);i>=0?db.records[i]=rec:db.records.push(rec);
+  save();pushRecord(rec);showResult(s,rec);drawRoster();drawLog();
+}
+$("#rAgain").onclick=()=>{$("#res").hidden=true;if(!stream)$("#camBtn").click()};
+$("#rMore").onclick=()=>{$("#res").hidden=true;show(cur)};
+$("#rBack").onclick=()=>{$("#res").hidden=true;go("dash")};
+$("#galBtn").onclick=()=>$("#galFile").click();
+$("#galFile").onchange=async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;const m=$("#camMsg");m.textContent="Reading image\u2026";
+  const im=await new Promise(ok=>{const u=new Image();u.onload=()=>ok(u);u.onerror=()=>ok(null);const fr=new FileReader();fr.onload=()=>{u.src=fr.result};fr.onerror=()=>ok(null);fr.readAsDataURL(f)});
+  if(!im){m.textContent="Couldn't read that image.";return}
+  let data=null;
+  if(bd){try{const r=await bd.detect(im);if(r.length)data=r[0].rawValue}catch(e){}}
+  if(!data&&await ensureJsQR()){const c=$("#cv"),x=c.getContext("2d",{willReadFrequently:true});c.width=im.width;c.height=im.height;x.drawImage(im,0,0);const k=jsQR(x.getImageData(0,0,c.width,c.height).data,c.width,c.height);if(k)data=k.data}
+  if(data){m.textContent="";lookup(data,true)}else m.textContent="No QR code found in that image."
+};
+let torch=false;
+$("#flashBtn").onclick=async()=>{try{torch=!torch;await stream.getVideoTracks()[0].applyConstraints({advanced:[{torch}]})}catch(e){$("#camMsg").textContent="Flash isn't available. Open the scanner first, or this camera has no flash."}};
+
+
+/* ---------- theme, install, offline shell ---------- */
+const rootEl=document.documentElement;
+const effTheme=()=>rootEl.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+function paintThemeBtns(){$$(".themeBtn").forEach(b=>b.textContent=effTheme()==="dark"?"\u2600\uFE0F Light":"\uD83C\uDF19 Dark")}
+function toggleTheme(){const t=effTheme()==="dark"?"light":"dark";rootEl.setAttribute("data-theme",t);try{localStorage.setItem("attendify_theme",t)}catch(e){}paintThemeBtns()}
+$$(".themeBtn").forEach(b=>b.onclick=toggleTheme);paintThemeBtns();
+let deferredInstall=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installBtn").hidden=false});
+$("#installBtn").onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();try{await deferredInstall.userChoice}catch(e){}deferredInstall=null;$("#installBtn").hidden=true};
+addEventListener("appinstalled",()=>{$("#installBtn").hidden=true});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!(navigator.standalone||matchMedia("(display-mode: standalone)").matches))$("#installHint").hidden=false;
+if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+applyMode();addEventListener("hashchange",applyMode);
+
+/* ---------- school ID cards ---------- */
+const LOGO_SVG='<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z" fill="#fff"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#0e7a45" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function idCard(s){
+  const staff=!s.sid,id=staff?s.id:s.sid;
+  let line;
+  if(staff)line=esc(s.role||"Staff");
+  else{const c=parseClass(s.strand);line=c.grade?"Grade "+esc(c.grade)+(c.sec?"<br>Section "+esc(c.sec):""):esc(s.strand||"")}
+  const d=document.createElement("div");d.className="idc";
+  d.innerHTML=`<div class="idc-h"><div>${LOGO_SVG}<b>Attendify</b></div><span>${esc((db.settings&&db.settings.school_name)||SCHOOL_NAME)}</span></div><div class="idc-b"><div class="idc-t">${staff?"STAFF":"STUDENT"}</div><div class="idc-q"></div><div class="idc-i"><div class="idc-n">${esc(s.name)}</div><div class="idc-c">${line}</div></div></div><div class="idc-f">SCAN \u2022 ATTEND \u2022 ACHIEVE</div>`;
+  const qbox=d.querySelector(".idc-q");
+  qr(qbox,id,8);
+  d._ready=(async()=>{
+    const p=await getPhoto(id,staff).catch(()=>"");
+    const c=document.createElement("div");c.className="idc-qc";
+    if(p){const im=document.createElement("img");im.src=p;im.alt="";c.appendChild(im)}
+    else c.textContent=ini(s.name);
+    qbox.appendChild(c);
+  })();
+  return d;
+}
+function classKey(s){const c=parseClass(s.strand);return[c.strand,c.grade,c.sec].join(" \u00B7 ")}
+function classLabel(s){const c=parseClass(s.strand);return c.strand+" \u2014 "+gLbl(c.grade)+(c.sec?", Section "+sLbl(c.sec):"")}
+function groupBySection(list){
+  const g={};list.forEach(s=>{const k=classKey(s);(g[k]=g[k]||{label:classLabel(s),items:[]}).items.push(s)});
+  return Object.keys(g).sort((a,b)=>a.localeCompare(b)).map(k=>g[k]).map(x=>(x.items.sort((a,b)=>a.name.localeCompare(b.name)),x));
+}
+async function printCards(list,groupLabel){
+  if(!list.length)return;
+  let a=$("#printArea");if(!a){a=document.createElement("div");a.id="printArea";document.body.appendChild(a)}
+  a.innerHTML="";
+  const addGroup=(label,items)=>{
+    const h=document.createElement("h3");h.className="idc-ph";h.textContent=label;a.appendChild(h);
+    const wrap=document.createElement("div");wrap.className="idc-pg";a.appendChild(wrap);
+    return items.map(s=>{const c=idCard(s);wrap.appendChild(c);return c});
+  };
+  let cards;
+  if(groupLabel)cards=addGroup(groupLabel,list);
+  else{cards=[];groupBySection(list).forEach(g=>{cards=cards.concat(addGroup(g.label,g.items))})}
+  await Promise.all(cards.map(c=>c._ready));
+  document.body.classList.add("printing");
+  addEventListener("afterprint",()=>document.body.classList.remove("printing"),{once:true});
+  setTimeout(()=>window.print(),150);
+}
+$("#sPrint").onclick=$("#sPrint").onclick=()=>{const s=me&&find(me.sid);if(s)printCards([s])};
+
+
+/* ---------- roles, settings, passwords ---------- */
+const DEFAULT_ADMIN_HASH="10a409d1b3b188002c3882fc9961b909fde574c684ebf3310012493f7c99efb8";
+const STUDENT_EXTRAS=false; /* true = also show history, fines list and ID card to students */
+if(STUDENT_EXTRAS)document.body.classList.add("extras");
+const isAdmin=t=>!!t&&/^admin$/i.test(t.role||"");
+function applyRole(){
+  const st=!!me&&me.type==="staff"&&!me.admin,row=st&&db.staff.find(x=>x.id===me.id),ed=!!(row&&row.can_edit);
+  document.body.classList.toggle("isStaff",st);document.body.classList.toggle("canEdit",ed);
+  if(st&&!ed&&!$("#vstudents").hidden)go("scan");
+}
+function paintSchool(){const t=[db.settings&&db.settings.school_name,db.settings&&db.settings.program_section].filter(Boolean).join(" \u00B7 ");$$(".schoolBar").forEach(e=>{e.textContent=t;e.hidden=!t})}
+function fillSettings(){const c=db.settings||{};$("#stSchool").value=c.school_name||"";$("#stProg").value=c.program_section||"";$("#stPfxS").value=pfx("student_prefix");$("#stPfxT").value=pfx("staff_prefix");sdLoad()}
+$("#stSave").onclick=async()=>{
+  const m=$("#stMsg"),v={school_name:$("#stSchool").value.trim(),program_section:$("#stProg").value.trim(),student_prefix:$("#stPfxS").value.trim().toUpperCase(),staff_prefix:$("#stPfxT").value.trim().toUpperCase()};
+  if(!/^[A-Z0-9-]*$/.test(v.student_prefix)||!/^[A-Z0-9-]*$/.test(v.staff_prefix)){flash(m,"ID prefixes can only use letters, numbers and dashes.");return}
+  const err=await upsertRows("settings",Object.entries(v).map(([key,value])=>({key,value})),"key");
+  if(err){flash(m,"Could not save: "+err+(/settings/i.test(err)?" (run attendify-setup.sql)":""));return}
+  db.settings=Object.assign(db.settings||{},v);save();paintSchool();fillPeople();
+  flash(m,"Saved. Next student ID: "+nextStudentId()+" \u00B7 next staff ID: "+nextStaffId(),true);
+};
+function sdLoad(){sdState.days=new Set(sdDays());sdState.nc=noClass().slice();sdDraw()}
+const SD_PRESETS={"5":[1,2,3,4,5],"6":[1,2,3,4,5,6],"7":[0,1,2,3,4,5,6]};
+function sdSync(){const a=[...sdState.days].sort().join(),k=Object.keys(SD_PRESETS).find(n=>SD_PRESETS[n].slice().sort().join()===a);$("#sdCount").value=k||"custom";$("#sdNote").textContent=sdState.days.size+" school day"+(sdState.days.size===1?"":"s")+" per week"}
+$("#sdCount").onchange=e=>{const v=e.target.value;if(SD_PRESETS[v]){sdState.days=new Set(SD_PRESETS[v]);sdDraw()}};
+function sdDraw(){
+  $("#sdDays").innerHTML=[1,2,3,4,5,6,0].map(g=>`<button class="${sdState.days.has(g)?"on":""}" data-g="${g}">${DAYN[g].slice(0,3)}</button>`).join("");
+  $("#ncList").innerHTML=sdState.nc.length?sdState.nc.map((x,i)=>`<button data-rm="${i}">${esc(x.d)}${x.n?" \u00B7 "+esc(x.n):""} \u2715</button>`).join(""):"<span class='muted'>No no-class dates added.</span>";
+  sdSync();
+}
+$("#sdDays").onclick=e=>{const b=e.target.closest("[data-g]");if(!b)return;const g=+b.dataset.g;sdState.days.has(g)?sdState.days.delete(g):sdState.days.add(g);sdDraw()};
+$("#ncList").onclick=e=>{const b=e.target.closest("[data-rm]");if(!b)return;sdState.nc.splice(+b.dataset.rm,1);sdDraw()};
+$("#ncAdd").onclick=()=>{const d=$("#ncDate").value;if(!d)return;sdState.nc=sdState.nc.filter(x=>x.d!==d).concat([{d,n:$("#ncNote").value.trim()}]).sort((a,b)=>a.d.localeCompare(b.d));$("#ncDate").value="";$("#ncNote").value="";sdDraw()};
+$("#sdSave").onclick=async()=>{
+  const m=$("#sdMsg");if(!sdState.days.size){flash(m,"Pick at least one school day.");return}
+  const v={school_days:[...sdState.days].sort().join(","),no_class:JSON.stringify(sdState.nc)};
+  const err=await upsertRows("settings",Object.entries(v).map(([key,value])=>({key,value})),"key");
+  if(err){flash(m,"Could not save: "+err);return}
+  db.settings=Object.assign(db.settings||{},v);save();tick();drawDash();flash(m,"School days saved.",true);
+};
+$("#pwToggle").onclick=()=>{const on=document.body.classList.toggle("showpw");$("#pwToggle").textContent=on?"Hide passwords":"Show passwords"};
+paintSchool();
+
+
+/* ---------- editors: admin chooses who may edit ---------- */
+function fillEdit(){
+  const sel=$("#edStu"),sig=db.students.map(x=>x.sid).join("|");
+  if(sel.dataset.sig!==sig){const v=sel.value;sel.innerHTML="";db.students.forEach(x=>sel.add(new Option(x.name+" \u2014 "+x.sid,x.sid)));if(v)sel.value=v;sel.dataset.sig=sig;loadEdit()}
+}
+function loadEdit(){const s=find($("#edStu").value),c=s?parseClass(s.strand):{strand:"",grade:"",sec:""};$("#edName").value=s?s.name:"";$("#edStrand").value=c.strand==="UNASSIGNED"?"":c.strand;$("#edSec").value=c.sec;$("#edGrade").value=c.grade}
+$("#edStu").onchange=loadEdit;
+$("#edSave").onclick=async()=>{
+  const m=$("#edMsg"),s=find($("#edStu").value),name=$("#edName").value.trim(),sd=$("#edStrand").value.trim(),sc=$("#edSec").value.trim(),gr=normGrade($("#edGrade").value);
+  if(!s)return;if(!name){flash(m,"Enter the student's full name.");return}
+  if(!sd||!sc||!gr){flash(m,"Fill in the strand, section and grade level.");return}
+  const strand=composeClass(sd,gr,sc);
+  const err=await updateRow("students","sid",s.sid,{name,strand});if(err){flash(m,"Could not save: "+err);return}
+  await updateRow("records","sid",s.sid,{name});
+  s.name=name;s.strand=strand;db.records.forEach(r=>{if(r.sid===s.sid)r.name=name});save();$("#edStu").dataset.sig="";drawRoster();drawLog();
+  flash(m,"Saved changes for "+name+".",true);
+};
+$("#edPhoto").onchange=async e=>{const f=e.target.files[0],sid=$("#edStu").value;e.target.value="";if(!f||!sid)return;const err=await setPhoto(sid,f);flash($("#edMsg"),err?"Photo not saved: "+err:"Photo saved.",!err)};
+function drawEditors(){
+  const list=db.staff.filter(t=>!isAdmin(t));
+  $("#edList").innerHTML=list.length?"<tr><th>Staff</th><th>Role</th><th>Can edit</th></tr>"+list.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.role)}</td><td><input type="checkbox" data-edit="${esc(t.id)}" ${t.can_edit?"checked":""}></td></tr>`).join(""):"<tr><td class='muted'>Add a staff member first.</td></tr>";
+}
+document.addEventListener("change",async e=>{
+  const c=e.target.closest("[data-edit]");if(!c)return;
+  const id=c.getAttribute("data-edit"),t=db.staff.find(x=>x.id===id),on=c.checked,m=$("#edPermMsg");
+  const err=await updateRow("staff","id",id,{can_edit:on});
+  if(err){c.checked=!on;flash(m,"Could not save: "+err+(/can_edit/i.test(err)?" (run attendify-setup.sql)":""));return}
+  if(t)t.can_edit=on;save();flash(m,(on?"Allowed ":"Removed editing for ")+(t?t.name:id)+".",true);
+});
+
+
+/* ---------- recently removed: restore ---------- */
+function drawTrash(){
+  const el=$("#trashList");if(!el)return;
+  const s=(db.studentsAll||[]).filter(x=>x.deleted_at),t=(db.staffAll||[]).filter(x=>x.deleted_at);
+  const rows=[...s.map(x=>({t:"Student",id:x.sid,name:x.name})),...t.map(x=>({t:"Staff",id:x.id,name:x.name}))];
+  el.innerHTML=rows.length?"<tr><th>Type</th><th>Name</th><th>ID</th><th></th></tr>"+rows.map(r=>{const k=r.t==="Student"?"s":"t";return `<tr><td>${r.t}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td><button class="p" data-restore="${k}:${esc(r.id)}">Restore</button> <button class="bad" data-perm="${k}:${esc(r.id)}" style="border-color:var(--bad);color:var(--bad)">Delete permanently</button></td></tr>`}).join(""):"<tr><td class='muted'>Nothing removed.</td></tr>";
+}
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-restore]");if(!b)return;
+  const parts=b.getAttribute("data-restore").split(":"),kind=parts[0],id=parts[1],table=kind==="s"?"students":"staff",col=kind==="s"?"sid":"id",m=$("#trashMsg");
+  const err=await updateRow(table,col,id,{deleted_at:null});
+  if(err){flash(m,"Could not restore: "+err);return}
+  const list=kind==="s"?db.studentsAll:db.staffAll,row=list.find(x=>(kind==="s"?x.sid:x.id)===id);if(row)row.deleted_at=null;
+  rescope();
+  save();drawRoster();drawTrash();fillPeople();flash(m,"Restored "+(row?row.name:id)+".",true);
+});
+
+/* ---------- backup & recovery ---------- */
+function backupData(){return{version:1,exported_at:new Date().toISOString(),school:db.settings,students:db.studentsAll,staff:db.staffAll,records:db.records,fines:db.fines,payments:db.payments,windows:Object.values(db.windows||{})}}
+$("#bkDown").onclick=()=>{
+  const blob=new Blob([JSON.stringify(backupData(),null,1)],{type:"application/json"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="attendify-backup-"+today()+".json";document.body.appendChild(a);a.click();a.remove();
+  flash($("#bkMsg"),"Downloaded. Keep this file somewhere safe (email it to yourself, or save it to Google Drive).",true);
+};
+$("#bkFile").onclick=()=>$("#bkInput").click();
+$("#bkInput").onchange=async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;const m=$("#bkMsg");
+  let bkp;try{bkp=JSON.parse(await f.text())}catch(err){flash(m,"That doesn't look like a valid backup file.");return}
+  if(!bkp||!Array.isArray(bkp.students)||!Array.isArray(bkp.staff)){flash(m,"That doesn't look like an Attendify backup file.");return}
+  if(!confirm("Restore this backup? It will bring back every student, staff member, attendance record, fine and payment it contains. Nothing currently in the app will be deleted. Continue?"))return;
+  flash(m,"Restoring\u2026");
+  const steps=[["students",bkp.students,"sid"],["staff",bkp.staff,"id"],["records",bkp.records,"sid,date"],["fines",bkp.fines,"id"],["payments",bkp.payments,"id"],["windows",bkp.windows,"date"]];
+  for(const step of steps){
+    const table=step[0],rows=step[1],conflict=step[2];
+    if(!Array.isArray(rows)||!rows.length)continue;
+    const err=await upsertRows(table,rows,conflict);
+    if(err){flash(m,"Stopped while restoring "+table+": "+err);return}
+  }
+  if(bkp.school)await upsertRows("settings",Object.entries(bkp.school).map(([key,value])=>({key,value})),"key");
+  await pull();drawTrash();fillPeople();
+  flash(m,"Backup restored.",true);
+};
+
+
+/* ---------- bulk add students from CSV ---------- */
+function csvTemplate(){return "name,strand,section,grade_level,student_id\nJuan Dela Cruz,STEM,A,12,\nMaria Santos,ABM,B,12,\nAndrei Lim,HUMSS,A,11,SC-2026-0099\n"}
+$("#tplBtn").onclick=()=>{
+  const blob=new Blob([csvTemplate()],{type:"text/csv"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="attendify-student-template.csv";document.body.appendChild(a);a.click();a.remove();
+};
+function parseCSV(text){
+  const rows=[];let row=[],cell="",q=false;text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(cell);cell=""}
+    else if(c==="\n"){row.push(cell);rows.push(row);row=[];cell=""}
+    else cell+=c;
+  }
+  if(cell.length||row.length){row.push(cell);rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim().length));
+}
+function defaultPin(id){const d=String(id).replace(/\D/g,"");return(d.length>=4?d.slice(-4):d.padStart(4,"0"))||"0000"}
+let bulkRows=[];
+$("#curPfx").textContent=pfx("student_prefix");
+$("#bulkFile").onclick=()=>{$("#curPfx").textContent=pfx("student_prefix");$("#bulkInput").click()};
+$("#bulkInput").onchange=async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;const m=$("#bulkMsg");m.textContent="";
+  const text=await f.text(),rows=parseCSV(text);if(!rows.length){flash(m,"That file has no rows.");return}
+  let head=rows[0].map(x=>x.trim().toLowerCase()),body=rows;
+  const looksLikeHeader=head.some(h=>/name/.test(h))&&head.some(h=>/id/.test(h));
+  const ci=names=>head.findIndex(h=>names.some(n=>h.includes(n)));
+  let iName=0,iStrand=1,iSec=2,iGrade=3,iId=4;
+  if(looksLikeHeader){iName=ci(["name"]);iId=ci(["id"]);iStrand=ci(["strand","program"]);iSec=ci(["section"]);iGrade=ci(["grade","level"]);body=rows.slice(1)}
+  const seen=new Set(),poolIds=db.students.map(x=>x.sid),out=[];
+  body.forEach((r,idx)=>{
+    const name=(r[iName]||"").trim();let id=(r[iId]||"").trim().toUpperCase().replace(/\s+/g,"-");let sd=iStrand>-1?(r[iStrand]||"").trim():"",sc=iSec>-1?(r[iSec]||"").trim():"",gr=iGrade>-1?normGrade(r[iGrade]):"";
+    if(!sc&&!gr&&sd){const c=parseClass(sd);if(c.grade){sd=c.strand==="UNASSIGNED"?"":c.strand;gr=c.grade;sc=c.sec}}
+    if(!name&&!id)return;
+    let status="ok",note="";
+    const strand=(sd&&sc&&gr)?composeClass(sd,gr,sc):"";
+    if(!name){status="error";note="Missing name"}
+    else if(!sd||!sc||!gr){status="error";note="Missing "+[!sd&&"strand",!sc&&"section",!gr&&"grade level"].filter(Boolean).join(", ")}
+    else if(!id){id=nextId(poolIds,pfx("student_prefix"),3);poolIds.push(id);note="Ready \u2014 ID assigned automatically"}
+    else if(seen.has(id)){status="error";note="Duplicate in this file"}
+    else if(find(id)){status="skip";note="ID already exists \u2014 will be skipped"}
+    if(id)seen.add(id);
+    out.push({row:idx+1,name,sd:sd.toUpperCase(),sc:sc.toUpperCase(),gr,id,strand,pin:id?defaultPin(id):"",status,note});
+  });
+  bulkRows=out;
+  const ok=out.filter(x=>x.status==="ok").length,skip=out.filter(x=>x.status==="skip").length,err=out.filter(x=>x.status==="error").length;
+  $("#bulkSummary").textContent=ok+" ready to add, "+skip+" skipped (already exist), "+err+" with problems, out of "+out.length+" row(s).";
+  $("#bulkTable").innerHTML="<tr><th>Row</th><th>Name</th><th>Strand</th><th>Section</th><th>Grade</th><th>Student ID</th><th>Password</th><th>Status</th></tr>"+
+    out.map(x=>`<tr><td>${x.row}</td><td>${esc(x.name)}</td><td>${esc(x.sd)}</td><td>${esc(x.sc)}</td><td>${esc(x.gr)}</td><td>${esc(x.id)}</td><td>${esc(x.pin)}</td><td class="${x.status==="error"?"bad":x.status==="skip"?"warn":"ok"}">${esc(x.note||"Ready")}</td></tr>`).join("");
+  $("#bulkPreview").hidden=false;
+  if(!ok)flash(m,out.length?"Nothing to import \u2014 fix the problems above and upload again.":"No usable rows found.");
+};
+$("#bulkCancel").onclick=()=>{bulkRows=[];$("#bulkPreview").hidden=true;$("#bulkMsg").textContent=""};
+$("#bulkImport").onclick=async()=>{
+  const ready=bulkRows.filter(x=>x.status==="ok"),m=$("#bulkMsg");
+  if(!ready.length){flash(m,"Nothing ready to import.");return}
+  flash(m,"Adding "+ready.length+" student(s)\u2026");
+  const rows=[];
+  for(const x of ready){
+    let hash;try{hash=await hashOf(x.id,x.pin)}catch(e){flash(m,"Import needs a secure (https) page.");return}
+    rows.push({sid:x.id,name:x.name,strand:x.strand,pin_hash:hash,pin_plain:x.pin,pin_changed:false});
+  }
+  const err=await insertRow("students",rows);
+  if(err){flash(m,"Could not save: "+err);return}
+  rows.forEach(r=>{db.students.push(r);db.studentsAll.push(r)});
+  db.students.sort((a,b)=>a.sid.localeCompare(b.sid));save();drawRoster();fillPeople();fillEdit();
+  const skipped=bulkRows.filter(x=>x.status==="skip").map(x=>x.id);
+  flash(m,"Added "+rows.length+" student(s)."+(skipped.length?" Skipped (already existed): "+skipped.join(", ")+".":""),true);
+  bulkRows=[];$("#bulkPreview").hidden=true;
+};
+
+
+/* ---------- staff & admin attendance ---------- */
+async function markStaffLogin(row){
+  if(!row)return;const id=row.id,d=today();
+  if(db.staffAtt.some(x=>x.staff_id===id&&x.date===d))return;
+  const rec={staff_id:id,name:row.name,date:d,time:timeNow(),status:"Present",by:"Self login"};
+  const err=await upsertRows("staff_attendance",rec,"staff_id,date");
+  if(!err)db.staffAtt.push(rec);
+}
+function drawStaffAtt(){
+  const el=$("#dStaffAtt");if(!el)return;const d=today();
+  const rows=db.staff.map(t=>{const r=db.staffAtt.find(x=>x.staff_id===t.id&&x.date===d);return{t,r}});
+  el.innerHTML="<tr><th>ID</th><th>Name</th><th>Role</th><th>Time</th><th>Status</th><th></th></tr>"+rows.map(({t,r})=>`<tr><td>${esc(t.id)}</td><td>${esc(t.name)}</td><td>${esc(t.role)}</td><td>${esc(r?r.time:"\u2014")}</td><td>${r?pill(r.status):"<span class=\"muted\">Not signed in</span>"}</td><td><button data-sset="${esc(t.id)}:Present">P</button> <button data-sset="${esc(t.id)}:Late">L</button> <button data-sset="${esc(t.id)}:Absent">A</button> <button data-sset="${esc(t.id)}:Excused">E</button></td></tr>`).join("");
+}
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-sset]");if(!b)return;
+  const parts=b.getAttribute("data-sset").split(":"),id=parts[0],status=parts[1],t=db.staff.find(x=>x.id===id),d=today(),m=$("#saMsg");
+  const rec={staff_id:id,name:t?t.name:id,date:d,time:timeNow(),status,by:staffName()};
+  const err=await upsertRows("staff_attendance",rec,"staff_id,date");
+  if(err){flash(m,"Could not save: "+err+(/staff_attendance/i.test(err)?" (run attendify-setup.sql)":""));return}
+  const i=db.staffAtt.findIndex(x=>x.staff_id===id&&x.date===d);i>=0?db.staffAtt[i]=rec:db.staffAtt.push(rec);
+  save();drawStaffAtt();flash(m,(t?t.name:id)+" marked "+status+".",true);
+});
+
+/* ---------- permanently delete ---------- */
+async function hardDeleteCascade(kind,id){
+  if(kind==="s"){
+    const e1=await deleteRow("fines","sid",id);if(e1)return e1;
+    const e2=await deleteRow("payments","sid",id);if(e2)return e2;
+    const e4=await deleteRow("records","sid",id);if(e4)return e4;
+    return await deleteRow("students","sid",id);
+  }
+  const e5=await deleteRow("staff_attendance","staff_id",id);if(e5)return e5;
+  return await deleteRow("staff","id",id);
+}
+let permArm=null;
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-perm]");if(!b)return;
+  const parts=b.getAttribute("data-perm").split(":"),kind=parts[0],id=parts[1],m=$("#trashMsg"),key=kind+":"+id;
+  if(permArm!==key){permArm=key;b.textContent="Click again to permanently delete";setTimeout(()=>{if(permArm===key){permArm=null;b.textContent="Delete permanently"}},4000);return}
+  permArm=null;
+  const err=await hardDeleteCascade(kind,id);
+  if(err){flash(m,"Could not delete: "+err);return}
+  if(kind==="s"){db.studentsAll=db.studentsAll.filter(x=>x.sid!==id);db.records=db.records.filter(x=>x.sid!==id);db.fines=db.fines.filter(x=>x.sid!==id);db.payments=db.payments.filter(x=>x.sid!==id)}
+  else{db.staffAll=db.staffAll.filter(x=>x.id!==id);db.staffAtt=db.staffAtt.filter(x=>x.staff_id!==id)}
+  save();drawTrash();drawLog();flash(m,"Permanently deleted "+id+" and their records. This can't be undone.",true);
+});
+
+/* ---------- student ---------- */
+function drawStudent(){
+  const s=find(me.sid);
+  $("#stTitle").textContent="Student account";
+  $("#sName").textContent=s.name;$("#sMeta").textContent=s.sid+" · "+s.strand;paintAvatar($("#sAv"),s);
+  $("#sP").textContent=cnt(s.sid,"Present");$("#sA").textContent=cnt(s.sid,"Absent");$("#sL").textContent=cnt(s.sid,"Late");$("#sF").textContent=peso(fines(s.sid));
+  qr($("#sQR"),s.sid,6);$("#sLedger").innerHTML=ledger(s.sid);
+  const tr=db.records.find(r=>r.sid===s.sid&&r.date===today());$("#sToday").textContent=tr?"Today: "+tr.status+" at "+tr.time:"Today: not recorded yet";tick();$("#sId").innerHTML="";$("#sId").appendChild(idCard(s));
+  const r=recs(s.sid).slice().reverse();
+  $("#sLog").innerHTML="<tr><th>Date</th><th>Time</th><th>Status</th><th>Fine</th></tr>"+
+   (r.length?r.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.time)}</td><td>${pill(x.status)}</td><td>${peso(FINE[x.status])}</td></tr>`).join(""):
+   "<tr><td colspan='4' class='muted'>No records yet.</td></tr>");
+}
+
+/* ---------- staff ---------- */
+$$(".nav").forEach(b=>b.onclick=()=>go(b.dataset.v));
+let cur=null;
+function show(s,msg,ok=true){
+  cur=s;$("#hit").hidden=!s;if(!s)return;
+  const t=$("#toast");t.innerHTML="";if(msg){const d=document.createElement("div");d.className="toast"+(ok?"":" err");d.textContent=msg;t.appendChild(d)}
+  $("#hName").textContent=s.name;
+  $("#hMeta").textContent=s.sid+" \u00B7 "+s.strand+" \u00B7 Present "+cnt(s.sid,"Present")+" \u00B7 Absent "+cnt(s.sid,"Absent");
+  $("#hBal").textContent="Balance due: "+peso(fines(s.sid))+"  (fines "+peso(autoFines(s.sid)+manualFines(s.sid))+" \u2212 paid "+peso(paidTotal(s.sid))+")";
+  const tr=db.records.find(r=>r.sid===s.sid&&r.date===$("#date").value);
+  $("#hToday").textContent=tr?`Already marked ${tr.status} on ${tr.date} by ${tr.by}. Recording again overwrites it.`:"No record yet for "+$("#date").value;
+  paintAvatar($("#hAv"),s);$("#hLedger").innerHTML=ledger(s.sid);applyGate();
+}
+function lookup(text,auto){$("#res").hidden=true;
+  const id=String(text||"").trim().toUpperCase().replace(/^STU-ATT:/,"");
+  let s=find(id);if(!s&&id.length>1){const m=db.students.filter(x=>x.name.toUpperCase().includes(id));if(m.length===1)s=m[0]}
+  if(!s){const t=db.staff.find(x=>String(x.id).toUpperCase()===id);if(t){$("#hit").hidden=true;$("#camMsg").textContent="That is a staff ID ("+t.name+", "+(t.role||"Staff")+"), not a student.";return}$("#hit").hidden=true;$("#camMsg").textContent="No student matches \u201C"+id+"\u201D.";return}
+  $("#camMsg").textContent="";(auto?autoMark(s):show(s,"Scanned \u2713 "+s.sid+" identified"));
+}
+$("#manualBtn").onclick=()=>lookup($("#manual").value);
+$("#manual").addEventListener("keydown",e=>{if(e.key==="Enter")lookup($("#manual").value)});
+$("#date").onchange=()=>{loadWin();cur&&show(cur)};
+$$("[data-mark]").forEach(b=>b.onclick=()=>{
+  if(!cur)return;const date=$("#date").value||today(),st=winState(date);let status=b.dataset.mark,note="";
+  if(st&&st.kind==="closed"&&(status==="Present"||status==="Late")){show(cur,st.nsd?st.text:"Time's up: attendance is closed, so Present and Late can't be recorded.",false);return}
+  if(status==="Present"&&st&&st.kind==="late"){status="Late";note=" (past the on-time cutoff, so marked Late)"}
+  const rec={sid:cur.sid,name:cur.name,date,time:timeNow(),status,by:staffName()};
+  const i=db.records.findIndex(r=>r.sid===cur.sid&&r.date===date);i>=0?db.records[i]=rec:db.records.push(rec);
+  save();pushRecord(rec);show(cur,"Saved \u2713 "+cur.name+" marked "+status+" on "+date+note);drawRoster();drawLog();
+});
+
+function drawRoster(){drawRosterTable();fillReset();if(typeof drawClasses==="function"&&!$("#vclasses").hidden)drawClasses()}
+/* ---------- Classes: browse by strand > grade level > section ---------- */
+const clsSel={strand:"",grade:"",sec:""};
+function parseClass(str){
+  const t=String(str||"").trim();
+  const m=t.match(/^(.*?)[\s\-]*(?:grade\s*)?(\d{1,2})[\-\u2013\u2014_\s]*(.*)$/i);
+  if(!m)return{strand:t.toUpperCase()||"UNASSIGNED",grade:"",sec:""};
+  return{strand:(m[1].trim().replace(/[\s\-]+$/,"")||"UNASSIGNED").toUpperCase(),grade:String(parseInt(m[2],10)),sec:m[3].trim().toUpperCase()};
+}
+function normGrade(v){return String(v||"").replace(/\D/g,"").replace(/^0+/,"").slice(0,2)}
+function composeClass(strand,grade,sec){return String(strand).trim().toUpperCase()+" "+grade+"-"+String(sec).trim().toUpperCase()}
+const gLbl=g=>g?"Grade "+g:"No grade", sLbl=x=>x||"No section";
+function drawClasses(){
+  const all=db.students.map(s=>Object.assign({s},parseClass(s.strand)));
+  const q=$("#clsSearch").value.trim().toUpperCase();
+  const base=q?all.filter(r=>r.s.name.toUpperCase().includes(q)||r.s.sid.toUpperCase().includes(q)):all;
+  const tally=(rows,k)=>{const o={};rows.forEach(r=>o[r[k]]=(o[r[k]]||0)+1);return o};
+  const chip=(label,n,on,k,v)=>`<button class="${on?"on":""}" data-k="${k}" data-v="${esc(v)}">${esc(label)}<b>${n}</b></button>`;
+  const strands=tally(base,"strand");
+  if(clsSel.strand&&!(clsSel.strand in strands)){clsSel.strand="";clsSel.grade="";clsSel.sec=""}
+  $("#clsStrand").innerHTML=chip("All",base.length,!clsSel.strand,"strand","")+Object.keys(strands).sort().map(k=>chip(k,strands[k],clsSel.strand===k,"strand",k)).join("");
+  const inS=clsSel.strand?base.filter(r=>r.strand===clsSel.strand):[];
+  const grades=tally(inS,"grade");
+  if(clsSel.grade!==""&&!(clsSel.grade in grades)){clsSel.grade="";clsSel.sec=""}
+  $("#clsGradeBox").hidden=!clsSel.strand;
+  $("#clsGrade").innerHTML=chip("All grades",inS.length,clsSel.grade==="","grade","")+Object.keys(grades).sort((a,b)=>(+a||99)-(+b||99)).map(k=>chip(gLbl(k),grades[k],clsSel.grade===k&&clsSel.grade!=="","grade",k)).join("");
+  const inG=clsSel.grade!==""?inS.filter(r=>r.grade===clsSel.grade):[];
+  const secs=tally(inG,"sec");
+  if(clsSel.sec!==""&&!(clsSel.sec in secs))clsSel.sec="";
+  $("#clsSecBox").hidden=clsSel.grade==="";
+  $("#clsSec").innerHTML=chip("All sections",inG.length,clsSel.sec==="","sec","")+Object.keys(secs).sort().map(k=>chip(sLbl(k),secs[k],clsSel.sec===k&&clsSel.sec!=="","sec",k)).join("");
+  let rows=base;
+  if(clsSel.strand)rows=rows.filter(r=>r.strand===clsSel.strand);
+  if(clsSel.grade!=="")rows=rows.filter(r=>r.grade===clsSel.grade);
+  if(clsSel.sec!=="")rows=rows.filter(r=>r.sec===clsSel.sec);
+  rows=rows.slice().sort((a,b)=>a.strand.localeCompare(b.strand)||(+a.grade||99)-(+b.grade||99)||a.sec.localeCompare(b.sec)||a.s.name.localeCompare(b.s.name));
+  const parts=[clsSel.strand,clsSel.grade!==""?gLbl(clsSel.grade):"",clsSel.sec!==""?"Section "+sLbl(clsSel.sec):""].filter(Boolean);
+  $("#clsTitle").textContent=parts.length?parts.join(" \u00B7 "):"All students";
+  const d=$("#date").value||today(),st=r=>{const x=db.records.find(y=>y.sid===r.s.sid&&y.date===d);return x?x.status:""};
+  const c={Present:0,Late:0,Absent:0,Excused:0};rows.forEach(r=>{const x=st(r);if(x in c)c[x]++});
+  $("#clsSum").textContent=rows.length+" student"+(rows.length===1?"":"s")+" \u00B7 "+c.Present+" present \u00B7 "+c.Late+" late \u00B7 "+c.Absent+" absent \u00B7 "+c.Excused+" excused ("+d+")";
+  $("#clsTable").innerHTML="<tr><th>Student</th><th>ID</th><th>Class</th><th>Status</th><th>P</th><th>A</th><th>Fines</th><th></th></tr>"+
+  (rows.length?rows.map(r=>`<tr><td>${esc(r.s.name)}</td><td>${esc(r.s.sid)}</td><td>${esc(r.s.strand)}</td><td>${st(r)?pill(st(r)):"<span class='muted'>\u2014</span>"}</td><td class="ok">${cnt(r.s.sid,"Present")}</td><td class="bad">${cnt(r.s.sid,"Absent")}</td><td>${peso(fines(r.s.sid))}</td><td><button data-open="${esc(r.s.sid)}">Open</button></td></tr>`).join(""):"<tr><td colspan='8' class='muted'>No students in this group.</td></tr>");
+}
+$("#vclasses").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.open){const s=find(b.dataset.open);if(s){go("scan");show(s,"Opened from Classes \u2713")}return}
+  if(b.id==="clsReset"){clsSel.strand=clsSel.grade=clsSel.sec="";$("#clsSearch").value="";drawClasses();return}
+  const k=b.dataset.k;if(!k)return;
+  if(k==="strand"){clsSel.strand=b.dataset.v;clsSel.grade="";clsSel.sec=""}
+  else if(k==="grade"){clsSel.grade=b.dataset.v;clsSel.sec=""}
+  else clsSel.sec=b.dataset.v;
+  drawClasses();
+});
+$("#clsSearch").addEventListener("input",drawClasses);
+function drawRosterTable(){
+  $("#roster").innerHTML="<tr><th>Student</th><th>ID</th><th>Strand</th><th>P</th><th>A</th><th>Fines</th><th class='adminOnly'>Password</th></tr>"+
+  db.students.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.sid)}</td><td>${esc(s.strand)}</td><td class="ok">${cnt(s.sid,"Present")}</td><td class="bad">${cnt(s.sid,"Absent")}</td><td>${peso(fines(s.sid))}</td><td class="adminOnly"><span class="pwm">••••</span><span class="pwv">${esc(s.pin_plain||"not stored")}</span></td></tr>`).join("");
+}
+function drawLog(){
+  const r=db.records.slice().reverse();
+  $("#log").innerHTML="<tr><th>Date</th><th>Time</th><th>ID</th><th>Name</th><th>Status</th><th>Recorded by</th></tr>"+
+  (r.length?r.map(x=>`<tr><td>${x.date}</td><td>${x.time}</td><td>${esc(x.sid)}</td><td>${esc(x.name)}</td><td>${pill(x.status)}</td><td>${esc(x.by)}</td></tr>`).join(""):
+  "<tr><td colspan='6' class='muted'>No attendance recorded yet.</td></tr>");
+}
+$("#qrBtn").onclick=()=>{
+  const g=$("#qrGrid");$("#qrSheet").hidden=false;g.innerHTML="";
+  const h=(t,n)=>{const e=document.createElement("div");e.className="idc-ph";e.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";e.innerHTML=`<b>${esc(t)}</b>`;if(n){const btn=document.createElement("button");btn.textContent="Print this section";btn.onclick=()=>printCards(n,t);e.appendChild(btn)}return e};
+  groupBySection(db.students).forEach(grp=>{g.appendChild(h(grp.label,grp.items));grp.items.forEach(x=>g.appendChild(idCard(x)))});
+  g.appendChild(h("Staff"));db.staff.forEach(x=>g.appendChild(idCard(x)));
+  $("#qrSheet").scrollIntoView({behavior:"smooth"});
+};
+$("#printAll").onclick=()=>printCards(db.students);
+$("#printStaff").onclick=()=>printCards(db.staff,"Staff");
+function fillStaffPick(){const sel=$("#phStf"),v=sel.value;sel.innerHTML="";db.staff.forEach(t=>sel.add(new Option(t.name+" \u2014 "+t.id,t.id)));if(v)sel.value=v}
+$("#stfPhoto").onchange=async e=>{const f=e.target.files[0],id=$("#phStf").value;e.target.value="";if(!f||!id)return;const err=await setPhoto(id,f,true);flash($("#phMsg"),err?"Photo not saved: "+err+(/photo/i.test(err)?" (run attendify-setup.sql)":""):"Photo saved.",!err)};
+$("#csvBtn").onclick=()=>{
+  const csv="student_id,name,date,time,status,fine,recorded_by\n"+db.records.map(r=>[r.sid,'"'+r.name+'"',r.date,r.time,r.status,FINE[r.status],'"'+r.by+'"'].join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="attendance.csv";a.click();
+};
+if(sb)$("#resetBtn").hidden=true;
+$("#resetBtn").onclick=()=>{if(confirm("Reset all demo records?")){db=seed();save();drawRoster();drawLog();show(null)}};
+
+/* ---------- camera ---------- */
+let stream=null,raf=null;
+function stopCam(){if(raf)cancelAnimationFrame(raf);raf=null;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}const c=$("#cam");if(c)c.hidden=true;const b=$("#camBtn");if(b)b.textContent="Open scanner"}
+let bd=null;try{if("BarcodeDetector" in window)bd=new BarcodeDetector({formats:["qr_code"]})}catch(e){bd=null}
+function loadScript(src){return new Promise((ok,no)=>{const e=document.createElement("script");e.src=src;e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
+async function ensureLib(test,urls){if(test())return true;for(const u of urls){try{await loadScript(u);if(test())return true}catch(e){}}return false}
+const JSQR_URLS=["https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js","https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js","https://unpkg.com/jsqr@1.4.0/dist/jsQR.js","https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"];
+const QR_URLS=["https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js","https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"];
+const ensureJsQR=()=>ensureLib(()=>typeof jsQR==="function",JSQR_URLS);
+function camErr(e){
+  const n=e&&e.name;
+  if(n==="NotAllowedError"||n==="SecurityError")return "Camera permission was blocked. Tap the lock icon in the address bar, allow Camera, then try again.";
+  if(n==="NotFoundError")return "No camera was found on this device.";
+  if(n==="NotReadableError")return "The camera is in use by another app. Close it and try again.";
+  return "Camera unavailable ("+(n||"error")+"). Use manual entry.";
+}
+$("#camBtn").onclick=async()=>{
+  if(stream){stopCam();return}
+  const m=$("#camMsg");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){m.textContent="This page can't use the camera. Open the https link directly in Chrome (Android) or Safari (iPhone), not inside another app.";return}
+  m.textContent="Starting camera\u2026";
+  if(!bd&&!(await ensureJsQR())){m.textContent="Couldn't load the QR scanner. Check your internet or turn off ad blockers, or use manual entry.";return}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+    const v=$("#cam");v.muted=true;v.srcObject=stream;v.hidden=false;await v.play();
+    $("#camBtn").textContent="Close scanner";m.textContent="Point at a student's QR code.";scan();
+  }catch(e){if(stream){stream.getTracks().forEach(t=>t.stop())}stream=null;$("#cam").hidden=true;m.textContent=camErr(e)}
+};
+async function scan(){
+  if(!stream)return;
+  const v=$("#cam");
+  if(v.readyState===v.HAVE_ENOUGH_DATA&&v.videoWidth){
+    let data=null;
+    if(bd){try{const r=await bd.detect(v);if(r.length)data=r[0].rawValue}catch(e){bd=null;ensureJsQR()}}
+    if(!data&&typeof jsQR==="function"){
+      const c=$("#cv"),x=c.getContext("2d",{willReadFrequently:true});c.width=v.videoWidth;c.height=v.videoHeight;x.drawImage(v,0,0,c.width,c.height);
+      const d=x.getImageData(0,0,c.width,c.height),k=jsQR(d.data,d.width,d.height);if(k&&k.data)data=k.data;
+    }
+    if(data){lookup(data,true);stopCam();return}
+  }
+  if(stream)raf=requestAnimationFrame(scan);
+}
+/* keep people signed in after a refresh */
+(async function restoreSession(){
+  let ss=null;try{ss=JSON.parse(localStorage.getItem(SKEY)||"null")}catch(e){}
+  if(!ss||!(ss.exp>Date.now())){clearSession();return}
+  if((ss.type==="staff")!==isAdminUrl())return;
+  document.body.classList.add("restoring");
+  try{
+    if(ss.type==="staff"){
+      me={type:"staff",id:ss.id,admin:!!ss.admin};
+      if(sb)await pull();
+      const st=(db.staffAll||db.staff).find(x=>x.id===ss.id&&!x.deleted_at);
+      if(!st){me=null;rescope();clearSession();return}
+      me={type:"staff",id:st.id,admin:isAdmin(st)};rescope();applyRole();screen("staff");
+      $("#stfTitle").textContent=st.name+" \u00B7 "+(st.role||"Staff");
+      $("#date").value=today();loadWin();drawRoster();drawLog();go(me.admin?"dash":"scan");
+    }else{
+      me={type:"student",sid:ss.sid};
+      let s=find(ss.sid);
+      if(!s&&sb){const r=await fetchAcct("students","sid",ss.sid);if(r.row){s=r.row;db.students.push(s);db.studentsAll.push(s)}}
+      if(!s){me=null;clearSession();return}
+      screen("student");drawStudent();if(sb)pull();
+    }
+  }catch(e){me=null;try{rescope()}catch(_){}}
+  finally{document.body.classList.remove("restoring")}
+})();
+/* if the QR-drawing library missed loading, retry from backups and redraw */
+(async()=>{if(await ensureLib(()=>typeof qrcode==="function",QR_URLS)&&me&&me.type==="student")drawStudent()})();
+</script>
+</body>
+</html>
