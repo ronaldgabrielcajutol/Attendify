@@ -185,7 +185,7 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
 <section id="student" hidden>
   <header><h1 id="stTitle"></h1><button class="themeBtn"></button><button class="out">Sign out</button></header>
   <div class="card">
-    <div class="schoolBar" style="font-weight:700;color:var(--brand-dark);margin-bottom:8px" hidden></div><div class="who"><div><h2 id="sName" style="margin:0"></h2><div class="muted" id="sMeta"></div></div></div>
+    <div class="schoolBar" style="font-weight:700;color:var(--brand-dark);margin-bottom:8px" hidden></div><div class="who"><div class="av" id="sAv"></div><div><h2 id="sName" style="margin:0"></h2><div class="muted" id="sMeta"></div><label class="muted" style="font-size:12px;display:block;margin-top:5px">Change my photo <input type="file" id="myPhoto" accept="image/*"></label><p class="muted" id="myPhotoMsg" style="margin:2px 0 0;font-size:12px"></p></div></div>
     <div class="banner wait" id="sWin" hidden></div><p class="muted" id="sToday" style="margin:8px 0 0"></p>
     <div class="stats">
       <div class="stat"><b class="ok" id="sP">0</b><span>Present</span></div>
@@ -759,6 +759,12 @@ async function setPhoto(id,file,staff){
   PH[(staff?"T:":"")+id]=url;const row=staff?db.staff.find(x=>x.id===id):find(id);if(row)row.photo=url;save();return null;
 }
 $("#rsPhoto").onchange=async e=>{const f=e.target.files[0],sid=$("#rsStu").value;if(!f||!sid)return;const err=await setPhoto(sid,f);e.target.value="";flash($("#rsMsg"),err?"Photo not saved: "+err:"Photo saved.",!err);if(cur&&cur.sid===sid)paintAvatar($("#hAv"),cur)};
+$("#myPhoto").onchange=async e=>{
+  const f=e.target.files[0];if(!f||!me||me.type!=="student")return;
+  const err=await setPhoto(me.sid,f);e.target.value="";
+  flash($("#myPhotoMsg"),err?"Photo not saved: "+err:"Photo saved \u2713",!err);
+  if(!err){const s=find(me.sid);paintAvatar($("#sAv"),s);$("#sId").innerHTML="";$("#sId").appendChild(idCard(s))}
+};
 
 
 /* ---------- Attendify: sign-up, dashboard, scan result ---------- */
@@ -1144,7 +1150,7 @@ document.addEventListener("click",async e=>{
 function drawStudent(){
   const s=find(me.sid);
   $("#stTitle").textContent="Student account";
-  $("#sName").textContent=s.name;$("#sMeta").textContent=s.sid+" · "+s.strand;
+  $("#sName").textContent=s.name;$("#sMeta").textContent=s.sid+" · "+s.strand;paintAvatar($("#sAv"),s);
   $("#sP").textContent=cnt(s.sid,"Present");$("#sA").textContent=cnt(s.sid,"Absent");$("#sL").textContent=cnt(s.sid,"Late");$("#sF").textContent=peso(fines(s.sid));
   qr($("#sQR"),s.sid,6);$("#sLedger").innerHTML=ledger(s.sid);
   const tr=db.records.find(r=>r.sid===s.sid&&r.date===today());$("#sToday").textContent=tr?"Today: "+tr.status+" at "+tr.time:"Today: not recorded yet";tick();$("#sId").innerHTML="";$("#sId").appendChild(idCard(s));
