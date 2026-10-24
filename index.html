@@ -228,6 +228,20 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
       <p class="muted" id="camMsg"></p>
       <video id="cam" playsinline hidden></video><canvas id="cv" hidden></canvas>
     </div>
+    <div class="card adminOnly"><h3>Fine amounts</h3>
+      <p class="muted" style="margin-top:0">Set how much each counts for. A fine of ₱0 means that one isn't charged. Scanning in Late already applies this automatically.</p>
+      <div class="row">
+        <label class="muted">Late <input id="fcLate" type="number" min="0" step="1" style="width:90px"></label>
+        <label class="muted">Absent <input id="fcAbsent" type="number" min="0" step="1" style="width:90px"></label>
+        <label class="muted">Excused <input id="fcExcused" type="number" min="0" step="1" style="width:90px"></label>
+        <label class="muted">Present <input id="fcPresent" type="number" min="0" step="1" style="width:90px"></label>
+      </div>
+      <div class="clsLbl" style="margin-top:14px">Other fine types (used when adding a fine by hand, e.g. "No ID")</div>
+      <div id="fcTypes"></div>
+      <div class="row" style="margin-top:6px"><input id="fcNewName" placeholder="New fine type, e.g. No ID" style="flex:1;min-width:150px"><input id="fcNewAmt" type="number" min="0" placeholder="Amount ₱" style="width:110px"><button id="fcAdd">Add</button></div>
+      <div class="row" style="margin-top:10px"><button class="p" id="fcSave">Save fine amounts</button></div>
+      <p class="muted" id="fcMsg" style="margin-bottom:0"></p>
+    </div>
     <div class="card adminOnly"><h3>Attendance window</h3>
       <div class="row"><input type="date" id="date"><input id="wTitle" placeholder="Event (e.g. Flag Ceremony)" style="flex:1;min-width:170px"></div>
       <div class="row" style="margin-top:8px"><label class="muted">Opens</label><input type="time" id="wStart"><label class="muted">Late after</label><input type="time" id="wLate"><label class="muted">Closes</label><input type="time" id="wClose"></div>
@@ -438,6 +452,7 @@ async function pull(){
 async function pushRecord(r){ if(sb)try{await sb.from("records").upsert(r,{onConflict:"sid,date"})}catch(e){console.warn(e)} }
 async function pushPayment(sid,amount){ if(sb)try{await sb.from("payments").insert({sid,amount})}catch(e){console.warn(e)} }
 function refreshUI(){
+  if(typeof applyFineConfig==="function")applyFineConfig();
   checkSetup();paintSchool();
   if(!me)return;
   if(me.type==="student"&&find(me.sid))drawStudent();
@@ -729,7 +744,48 @@ $("#wCloseNow").onclick=async()=>{
   miss.forEach(r=>db.records.push(r));db.windows[d]=w;save();tick();drawRoster();drawLog();flash(m,"Closed. "+miss.length+" student(s) with no record were marked Absent.",true);
 };
 
-document.querySelectorAll("[data-mark]").forEach(b=>{const f=FINE[b.dataset.mark];b.textContent=b.dataset.mark+(f?" (₱"+f+")":"")});
+function relabelFineButtons(){document.querySelectorAll("[data-mark]").forEach(b=>{const f=FINE[b.dataset.mark];b.textContent=b.dataset.mark+(f?" (₱"+f+")":"")})}
+relabelFineButtons();
+/* ---------- configurable fine amounts ---------- */
+function applyFineConfig(){
+  let c={};try{c=JSON.parse(db.settings&&db.settings.fine_config||"{}")}catch(e){}
+  if(c.status){["Present","Late","Absent","Excused"].forEach(k=>{if(c.status[k]!=null)FINE[k]=+c.status[k]||0})}
+  if(Array.isArray(c.types)){
+    Object.keys(FINE_TYPES).forEach(k=>delete FINE_TYPES[k]);
+    c.types.forEach(t=>{if(t&&t.name)FINE_TYPES[String(t.name).trim()]=+t.amount||0});
+  }
+  relabelFineButtons();
+  const dl=$("#fineTypes");if(dl)dl.innerHTML=Object.keys(FINE_TYPES).map(k=>`<option value="${esc(k)}">`).join("");
+}
+applyFineConfig();
+let fcTypesDraft=null;
+function fcDrawTypes(){
+  $("#fcTypes").innerHTML=Object.keys(fcTypesDraft).length?Object.keys(fcTypesDraft).map(k=>
+    `<div class="row" style="margin-top:6px" data-t="${esc(k)}"><input value="${esc(k)}" disabled style="flex:1;min-width:150px"><input type="number" min="0" value="${esc(fcTypesDraft[k])}" style="width:110px" data-amt><button data-rm>Remove</button></div>`
+  ).join(""):"<p class='muted'>No custom fine types yet.</p>";
+}
+function fcLoad(){
+  $("#fcLate").value=FINE.Late||0;$("#fcAbsent").value=FINE.Absent||0;$("#fcExcused").value=FINE.Excused||0;$("#fcPresent").value=FINE.Present||0;
+  fcTypesDraft=Object.assign({},FINE_TYPES);fcDrawTypes();$("#fcNewName").value="";$("#fcNewAmt").value="";$("#fcMsg").textContent="";
+}
+$("#fcTypes").addEventListener("input",e=>{const row=e.target.closest("[data-t]");if(!row||!e.target.hasAttribute("data-amt"))return;fcTypesDraft[row.dataset.t]=+e.target.value||0});
+$("#fcTypes").addEventListener("click",e=>{const row=e.target.closest("[data-t]");if(!row||!e.target.hasAttribute("data-rm"))return;delete fcTypesDraft[row.dataset.t];fcDrawTypes()});
+$("#fcAdd").onclick=()=>{
+  const n=$("#fcNewName").value.trim(),a=+$("#fcNewAmt").value||0;
+  if(!n){flash($("#fcMsg"),"Name the fine type first (e.g. No ID).",false);return}
+  fcTypesDraft[n]=a;$("#fcNewName").value="";$("#fcNewAmt").value="";fcDrawTypes();
+};
+$("#fcSave").onclick=async()=>{
+  const m=$("#fcMsg");
+  const cfg={status:{Late:+$("#fcLate").value||0,Absent:+$("#fcAbsent").value||0,Excused:+$("#fcExcused").value||0,Present:+$("#fcPresent").value||0},
+    types:Object.keys(fcTypesDraft).map(k=>({name:k,amount:fcTypesDraft[k]}))};
+  const value=JSON.stringify(cfg);
+  const err=await upsertRows("settings",[{key:"fine_config",value}],"key");
+  if(err){flash(m,"Could not save: "+err,false);return}
+  db.settings=db.settings||{};db.settings.fine_config=value;save();
+  applyFineConfig();drawRoster();if(cur&&!$("#hit").hidden)show(cur);
+  flash(m,"Fine amounts saved.",true);
+};
 /* ---------- fines & payments ---------- */
 function ledger(sid){
   const rows=[...recs(sid).filter(r=>FINE[r.status]).map(r=>({d:r.date,l:r.status+" (auto)",a:FINE[r.status],b:r.by})),
@@ -819,7 +875,7 @@ $("#suBtn").onclick=async()=>{
   db.staff.push(row);db.staffAll.push(row);save();["suName","suId","suKey","suCode"].forEach(i=>$("#"+i).value="");
   me={type:"staff",id,admin:true};applyRole();screen("staff");await markStaffLogin(row);$("#stfTitle").textContent=name+" \u00B7 Admin";$("#date").value=today();loadWin();drawRoster();drawLog();go("dash");
 };
-function go(v){$$(".nav").forEach(x=>x.classList.toggle("on",x.dataset.v===v));["dash","scan","students","classes","staff","settings","records"].forEach(k=>$("#v"+k).hidden=k!==v);if(v!=="scan")stopCam();if(v==="dash")drawDash();if(v==="settings")fillSettings();if(v==="classes")drawClasses();window.scrollTo(0,0)}
+function go(v){$$(".nav").forEach(x=>x.classList.toggle("on",x.dataset.v===v));["dash","scan","students","classes","staff","settings","records"].forEach(k=>$("#v"+k).hidden=k!==v);if(v!=="scan")stopCam();if(v==="dash")drawDash();if(v==="settings")fillSettings();if(v==="classes")drawClasses();if(v==="scan")fcLoad();window.scrollTo(0,0)}
 const dOpen={};
 function drawTodayGroups(r){
   const by={};r.forEach(x=>by[x.sid]=x);const g={};
