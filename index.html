@@ -60,7 +60,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 :root{--bg:#f2f8f4;--brand:#0f7a43;--chip:#e8f4ed;--okbg:#dcf3e5;--line:#dcebe2;--ok:#0f7a43}
 .wrap{padding-bottom:92px}.warn{color:#c77800}
 .pill{display:inline-block;padding:2px 10px;border-radius:8px;font-size:12px;font-weight:600}
-.pill.Present{background:#dcf3e5;color:#0f7a43}.pill.Late{background:#fff0cf;color:#a86400}.pill.Absent{background:#fde3e1;color:#b3261e}.pill.Excused{background:#e3ecfb;color:#2a55b0}
+.pill.Present{background:#dcf3e5;color:#0f7a43}.pill.Late{background:#fff0cf;color:#a86400}.pill.Absent{background:#fde3e1;color:#b3261e}.pill.Excused{background:#e3ecfb;color:#2a55b0}.pill.Missed{background:var(--p-bad-bg,#fde3e1);color:var(--p-bad-fg,#b3261e)}.pill.Open{background:var(--chip,#e7f5ec);color:var(--muted,#66796e)}.qfRow button{border-color:var(--bad);color:var(--bad)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
 .menuBtn{display:block;width:100%;text-align:left;padding:14px 16px;margin-top:10px;border-radius:14px}
 .menuBtn b{display:block;color:var(--brand);font-size:16px}
@@ -196,9 +196,14 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
     <div class="qr" id="sQR"></div>
     <p class="muted" style="text-align:center;margin-bottom:0">Show this code to authorized personnel.</p>
   </div>
+  <div class="card"><h3>Event history</h3>
+    <div class="banner closed" id="sMissBanner" hidden></div>
+    <p class="muted" style="margin:6px 0 8px">Every event so far and what was recorded for you. If an event shows Missed or Absent, you have no attendance for it.</p>
+    <div class="row" style="margin-bottom:8px"><button class="p" id="hAll">All events</button><button id="hMiss">Missed only</button></div>
+    <div class="scroll"><table id="sHist"></table></div>
+  </div>
   <div class="card extra"><h3>My school ID</h3><div id="sId" style="overflow-x:auto"></div><div class="row" style="margin-top:10px"><button class="p" id="sPrint">Print / save my ID</button></div></div>
   <div class="card extra"><h3>My fines &amp; payments</h3><div class="scroll"><table id="sLedger"></table></div><p class="muted" style="margin-bottom:0">To pay a fine, hand the amount to the Student Council or Adviser. They will record it here.</p></div>
-  <div class="card extra"><h3>My attendance history</h3><div class="scroll"><table id="sLog"></table></div></div>
   <div class="card"><h3>Change my PIN</h3>
     <div class="row"><input id="oldPin" type="password" placeholder="Current PIN" style="width:150px"><input id="newPin" type="password" placeholder="New PIN (4+ characters)" style="flex:1;min-width:170px"><button id="chgPin">Update</button></div>
     <p class="muted" id="pinMsg" style="margin-bottom:0"></p>
@@ -236,7 +241,7 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
         <label class="muted">Excused <input id="fcExcused" type="number" min="0" step="1" style="width:90px"></label>
         <label class="muted">Present <input id="fcPresent" type="number" min="0" step="1" style="width:90px"></label>
       </div>
-      <div class="clsLbl" style="margin-top:14px">Other fine types (used when adding a fine by hand, e.g. "No ID")</div>
+      <div class="clsLbl" style="margin-top:14px">Quick-fine buttons: each one appears as a one-tap button after you scan a student, e.g. No ID = ₱20. Change the amount or add more, then Save.</div>
       <div id="fcTypes"></div>
       <div class="row" style="margin-top:6px"><input id="fcNewName" placeholder="New fine type, e.g. No ID" style="flex:1;min-width:150px"><input id="fcNewAmt" type="number" min="0" placeholder="Amount ₱" style="width:110px"><button id="fcAdd">Add</button></div>
       <div class="row" style="margin-top:10px"><button class="p" id="fcSave">Save fine amounts</button></div>
@@ -253,6 +258,8 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
       <div class="who" style="text-align:left"><div class="av" id="rAv"></div><div><h3 id="rName" style="margin:0"></h3><div class="muted" id="rMeta"></div></div></div>
       <div class="tile2"><span class="muted">Time In</span><br><b style="font-size:20px" id="rTime"></b> <span class="muted" id="rDate"></span></div>
       <div class="tile2"><span class="muted">Status</span><br><span id="rStatus"></span></div>
+      <div class="clsLbl" style="text-align:left">Quick fines</div>
+      <div class="row qfRow" id="qfRes" style="margin:6px 0 10px"></div>
       <button class="p" id="rAgain" style="width:100%">Scan Another QR Code</button>
       <button id="rMore" style="width:100%;margin-top:8px">Change status / add fine</button>
       <button id="rBack" style="width:100%;margin-top:8px">Back to Dashboard</button>
@@ -263,6 +270,8 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
       <p class="muted" id="hToday" style="margin:8px 0"></p><p class="bad" id="hWarn" style="margin:6px 0"></p>
       <div class="row"><button id="hScanNext">↻ Scan next student</button></div>
       <div class="row" style="margin-top:8px"><button class="p" data-mark="Present">Present</button><button data-mark="Late">Late</button><button data-mark="Absent">Absent</button><button data-mark="Excused">Excused</button></div>
+      <div class="clsLbl" style="margin-top:14px">Quick fines (one tap, applied automatically)</div>
+      <div class="row qfRow" id="qfRow" style="margin-top:6px"></div>
       <h3 style="margin:16px 0 6px">Fines &amp; payments</h3>
       <p class="muted" id="hBal" style="margin:0 0 8px"></p>
       <div class="row"><input id="fnType" list="fineTypes" placeholder="Fine for (e.g. Littering)" style="flex:1;min-width:160px"><input id="fnAmt" type="number" min="1" placeholder="Amount ₱" style="width:120px"></div>
@@ -755,7 +764,7 @@ function applyFineConfig(){
     Object.keys(FINE_TYPES).forEach(k=>delete FINE_TYPES[k]);
     c.types.forEach(t=>{if(t&&t.name)FINE_TYPES[String(t.name).trim()]=+t.amount||0});
   }
-  relabelFineButtons();
+  relabelFineButtons();renderQuickFines();
   const dl=$("#fineTypes");if(dl)dl.innerHTML=Object.keys(FINE_TYPES).map(k=>`<option value="${esc(k)}">`).join("");
 }
 applyFineConfig();
@@ -787,6 +796,23 @@ $("#fcSave").onclick=async()=>{
   applyFineConfig();drawRoster();if(cur&&!$("#hit").hidden)show(cur);
   flash(m,"Fine amounts saved.",true);
 };
+
+/* ---------- quick fines (one tap, e.g. No ID = 20) ---------- */
+function renderQuickFines(){
+  const ks=Object.keys(FINE_TYPES).filter(k=>FINE_TYPES[k]>0).sort((a,b)=>(b==="No ID")-(a==="No ID"));
+  const h=ks.length?ks.map(k=>`<button data-qf="${esc(k)}">${esc(k)} (${peso(FINE_TYPES[k])})</button>`).join(""):"<span class='muted'>No quick fines yet. An admin can add them under Fine amounts.</span>";
+  ["#qfRow","#qfRes"].forEach(q=>{const e=$(q);if(e)e.innerHTML=h});
+}
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-qf]");if(!b||!cur)return;
+  const title=b.dataset.qf,amt=FINE_TYPES[title];if(!(amt>0))return;
+  clearTimeout(autoNextT);$("#res").hidden=true;
+  if(db.fines.some(f=>f.sid===cur.sid&&f.title===title&&f.date===today())&&!confirm(cur.name+" was already fined \""+title+"\" today. Add it again?")){show(cur);return}
+  const row={sid:cur.sid,title,reason:"Quick fine",amount:amt,date:today(),by:staffName()},err=await insertRow("fines",row);
+  if(err){show(cur,"Could not save: "+err+(/title/i.test(err)?" (run supabase-update-v3.sql first)":""),false);return}
+  db.fines.push(row);save();show(cur,"Fine added: "+title+", "+peso(amt)+".");drawRoster();
+});
+renderQuickFines();
 /* ---------- fines & payments ---------- */
 function ledger(sid){
   const rows=[...recs(sid).filter(r=>FINE[r.status]).map(r=>({d:r.date,l:r.status+" (auto)",a:FINE[r.status],b:r.by})),
@@ -1239,11 +1265,33 @@ function drawStudent(){
   $("#sP").textContent=cnt(s.sid,"Present");$("#sA").textContent=cnt(s.sid,"Absent");$("#sL").textContent=cnt(s.sid,"Late");$("#sF").textContent=peso(fines(s.sid));
   qr($("#sQR"),s.sid,6,{id:s.sid,staff:false,name:s.name});$("#sLedger").innerHTML=ledger(s.sid);
   const tr=db.records.find(r=>r.sid===s.sid&&r.date===today());$("#sToday").textContent=tr?"Today: "+tr.status+" at "+tr.time:"Today: not recorded yet";tick();$("#sId").innerHTML="";$("#sId").appendChild(idCard(s));
-  const r=recs(s.sid).slice().reverse();
-  $("#sLog").innerHTML="<tr><th>Date</th><th>Event</th><th>Time</th><th>Status</th><th>Fine</th></tr>"+
-   (r.length?r.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc((db.windows[x.date]&&db.windows[x.date].title)||"\u2014")}</td><td>${esc(x.time)}</td><td>${pill(x.status)}</td><td>${peso(FINE[x.status])}</td></tr>`).join(""):
-   "<tr><td colspan='5' class='muted'>No records yet.</td></tr>");
+  drawHistory(s);
 }
+
+/* ---------- student event history (shows missed events too) ---------- */
+let histFilter="all";
+function histRows(sid){
+  const t=today(),dates=new Set([...Object.keys(db.windows||{}),...recs(sid).map(r=>r.date)]);
+  return [...dates].filter(d=>d<=t).sort().reverse().map(d=>{
+    const w=db.windows[d],r=db.records.find(x=>x.sid===sid&&x.date===d),st=winState(d);
+    let status,time="\u2014";
+    if(r){status=r.status;time=r.time}
+    else if(w&&st&&st.kind==="closed"&&!st.nsd)status="Missed";
+    else if(w&&st&&(st.kind==="ontime"||st.kind==="late"))status="Open";
+    else return null;
+    return{d,title:(w&&w.title)||"\u2014",time,status,fine:r?(FINE[r.status]||0):0};
+  }).filter(Boolean);
+}
+function drawHistory(s){
+  const all=histRows(s.sid),miss=all.filter(x=>x.status==="Missed"||x.status==="Absent"),rows=histFilter==="missed"?miss:all,b=$("#sMissBanner");
+  b.hidden=!miss.length;if(miss.length)b.textContent="You missed "+miss.length+" event"+(miss.length===1?"":"s")+". Latest: "+miss[0].title+" ("+miss[0].d+").";
+  $("#hAll").className=histFilter==="all"?"p":"";$("#hMiss").className=histFilter==="missed"?"p":"";
+  $("#sHist").innerHTML="<tr><th>Date</th><th>Event</th><th>Time</th><th>Status</th><th>Fine</th></tr>"+
+   (rows.length?rows.map(x=>`<tr><td>${esc(x.d)}</td><td>${esc(x.title)}</td><td>${esc(x.time)}</td><td>${pill(x.status)}</td><td>${x.fine?peso(x.fine):"\u2014"}</td></tr>`).join(""):
+   "<tr><td colspan='5' class='muted'>"+(histFilter==="missed"?"No missed events. Keep it up!":"No events yet.")+"</td></tr>");
+}
+$("#hAll").onclick=()=>{histFilter="all";const s=me&&find(me.sid);if(s)drawHistory(s)};
+$("#hMiss").onclick=()=>{histFilter="missed";const s=me&&find(me.sid);if(s)drawHistory(s)};
 
 /* ---------- staff ---------- */
 $$(".nav").forEach(b=>b.onclick=()=>go(b.dataset.v));
