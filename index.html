@@ -219,12 +219,6 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
     <div class="card"><h3>Pending Payments</h3><div class="scroll"><table id="dPay"></table></div></div>
   </div>
   <div id="vscan" hidden>
-    <div class="card adminOnly"><h3>Attendance window</h3>
-      <div class="row"><input type="date" id="date"><input id="wTitle" placeholder="Event (e.g. Flag Ceremony)" style="flex:1;min-width:170px"></div>
-      <div class="row" style="margin-top:8px"><label class="muted">Opens</label><input type="time" id="wStart"><label class="muted">Late after</label><input type="time" id="wLate"><label class="muted">Closes</label><input type="time" id="wClose"></div>
-      <div class="row" style="margin-top:8px"><button class="p" id="wSave">Save window</button><button id="wCloseNow">Close &amp; mark absentees</button><button id="wClear">Remove window</button></div>
-      <p class="muted" id="wStatus" style="margin:10px 0 0;font-weight:600"></p><p class="muted" id="wMsg" style="margin:4px 0 0"></p>
-    </div>
     <div class="card">
       <div class="row">
         <button id="camBtn" class="p">Open scanner</button><button id="flashBtn">⚡ Flash</button><button id="galBtn">Scan from gallery</button><input type="file" id="galFile" accept="image/*" hidden>
@@ -233,6 +227,12 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
       </div>
       <p class="muted" id="camMsg"></p>
       <video id="cam" playsinline hidden></video><canvas id="cv" hidden></canvas>
+    </div>
+    <div class="card adminOnly"><h3>Attendance window</h3>
+      <div class="row"><input type="date" id="date"><input id="wTitle" placeholder="Event (e.g. Flag Ceremony)" style="flex:1;min-width:170px"></div>
+      <div class="row" style="margin-top:8px"><label class="muted">Opens</label><input type="time" id="wStart"><label class="muted">Late after</label><input type="time" id="wLate"><label class="muted">Closes</label><input type="time" id="wClose"></div>
+      <div class="row" style="margin-top:8px"><button class="p" id="wSave">Save window</button><button id="wCloseNow">Close &amp; mark absentees</button><button id="wClear">Remove window</button></div>
+      <p class="muted" id="wStatus" style="margin:10px 0 0;font-weight:600"></p><p class="muted" id="wMsg" style="margin:4px 0 0"></p>
     </div>
     <div class="card" id="res" hidden style="text-align:center">
       <div class="okbig">✓</div><h2 style="margin:8px 0 2px">Attendance Marked!</h2><p class="muted" style="margin-top:0">The student has been successfully checked in.</p>
@@ -363,7 +363,8 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
     </div>
     <div class="card" id="qrSheet" hidden><div class="row" style="justify-content:space-between"><h3 style="margin:0">Student ID cards</h3><span class="row"><button class="p" id="printAll">Print students</button><button id="printStaff">Print staff</button></span></div>
       <p class="muted">Each card has the student's QR code with their photo in the middle, their name, grade and section. Cards print grouped by section — or use “Print this section” on just one group. In the print window you can choose "Save as PDF". Cut along the green border.</p>
-      <div class="grid" id="qrGrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))"></div></div>
+      <div class="row"><input id="qrSearch" placeholder="Search a name, ID, strand or section" style="flex:1;min-width:200px"><button id="qrSearchBtn">Search</button></div>
+      <div class="grid" id="qrGrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:10px"></div></div>
   </div>
 
   <div id="vrecords" hidden>
@@ -1284,13 +1285,20 @@ function drawLog(){
   (r.length?r.map(x=>`<tr><td>${x.date}</td><td>${x.time}</td><td>${esc(x.sid)}</td><td>${esc(x.name)}</td><td>${pill(x.status)}</td><td>${esc(x.by)}</td></tr>`).join(""):
   "<tr><td colspan='6' class='muted'>No attendance recorded yet.</td></tr>");
 }
-$("#qrBtn").onclick=()=>{
-  const g=$("#qrGrid");$("#qrSheet").hidden=false;g.innerHTML="";
-  const h=(t,n)=>{const e=document.createElement("div");e.className="idc-ph";e.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";e.innerHTML=`<b>${esc(t)}</b>`;if(n){const btn=document.createElement("button");btn.textContent="Print this section";btn.onclick=()=>printCards(n,t);e.appendChild(btn)}return e};
-  groupBySection(db.students).forEach(grp=>{g.appendChild(h(grp.label,grp.items));grp.items.forEach(x=>g.appendChild(idCard(x)))});
-  g.appendChild(h("Staff"));db.staff.forEach(x=>g.appendChild(idCard(x)));
-  $("#qrSheet").scrollIntoView({behavior:"smooth"});
-};
+function drawQrSheet(){
+  const q=$("#qrSearch").value.trim().toUpperCase();
+  const match=x=>!q||x.name.toUpperCase().includes(q)||(x.sid||x.id||"").toUpperCase().includes(q)||(x.strand||"").toUpperCase().includes(q)||(x.role||"").toUpperCase().includes(q);
+  const students=db.students.filter(match),staff=db.staff.filter(match);
+  const g=$("#qrGrid");g.innerHTML="";
+  const h=(t,n)=>{const e=document.createElement("div");e.className="idc-ph";e.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";e.innerHTML=`<b>${esc(t)}</b>`;if(n&&n.length){const btn=document.createElement("button");btn.textContent="Print this section";btn.onclick=()=>printCards(n,t);e.appendChild(btn)}return e};
+  if(!students.length&&!staff.length){g.innerHTML="<p class='muted' style='grid-column:1/-1'>No match for that search.</p>";return}
+  groupBySection(students).forEach(grp=>{g.appendChild(h(grp.label,grp.items));grp.items.forEach(x=>g.appendChild(idCard(x)))});
+  if(staff.length){g.appendChild(h("Staff"));staff.forEach(x=>g.appendChild(idCard(x)))}
+}
+$("#qrBtn").onclick=()=>{$("#qrSheet").hidden=false;$("#qrSearch").value="";drawQrSheet();$("#qrSheet").scrollIntoView({behavior:"smooth"})};
+$("#qrSearchBtn").onclick=drawQrSheet;
+$("#qrSearch").addEventListener("input",drawQrSheet);
+$("#qrSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();drawQrSheet()}});
 $("#printAll").onclick=()=>printCards(db.students);
 $("#printStaff").onclick=()=>printCards(db.staff,"Staff");
 function fillStaffPick(){const sel=$("#phStf"),v=sel.value;sel.innerHTML="";db.staff.forEach(t=>sel.add(new Option(t.name+" \u2014 "+t.id,t.id)));if(v)sel.value=v}
