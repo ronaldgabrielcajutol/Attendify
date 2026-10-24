@@ -228,6 +228,20 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
       <p class="muted" id="camMsg"></p>
       <video id="cam" playsinline hidden></video><canvas id="cv" hidden></canvas>
     </div>
+    <div class="card adminOnly"><h3>Fine amounts</h3>
+      <p class="muted" style="margin-top:0">Set how much each counts for. A fine of ₱0 means that one isn't charged. Scanning in Late already applies this automatically.</p>
+      <div class="row">
+        <label class="muted">Late <input id="fcLate" type="number" min="0" step="1" style="width:90px"></label>
+        <label class="muted">Absent <input id="fcAbsent" type="number" min="0" step="1" style="width:90px"></label>
+        <label class="muted">Excused <input id="fcExcused" type="number" min="0" step="1" style="width:90px"></label>
+        <label class="muted">Present <input id="fcPresent" type="number" min="0" step="1" style="width:90px"></label>
+      </div>
+      <div class="clsLbl" style="margin-top:14px">Other fine types (used when adding a fine by hand, e.g. "No ID")</div>
+      <div id="fcTypes"></div>
+      <div class="row" style="margin-top:6px"><input id="fcNewName" placeholder="New fine type, e.g. No ID" style="flex:1;min-width:150px"><input id="fcNewAmt" type="number" min="0" placeholder="Amount ₱" style="width:110px"><button id="fcAdd">Add</button></div>
+      <div class="row" style="margin-top:10px"><button class="p" id="fcSave">Save fine amounts</button></div>
+      <p class="muted" id="fcMsg" style="margin-bottom:0"></p>
+    </div>
     <div class="card adminOnly"><h3>Attendance window</h3>
       <div class="row"><input type="date" id="date"><input id="wTitle" placeholder="Event (e.g. Flag Ceremony)" style="flex:1;min-width:170px"></div>
       <div class="row" style="margin-top:8px"><label class="muted">Opens</label><input type="time" id="wStart"><label class="muted">Late after</label><input type="time" id="wLate"><label class="muted">Closes</label><input type="time" id="wClose"></div>
@@ -379,6 +393,7 @@ body.isStaff:not(.canEdit) .editOnly{display:none!important}
 <script>
 /* No automatic fines. Late and Absent carry no fine; fines are added by hand. */
 const FINE={Present:0,Late:30,Absent:0,Excused:0};
+const FINE_TYPES={"Littering":50,"No ID":20,"Improper uniform":30,"Missed cleaning duty":30,"Disrespect to staff":50};
 const HAS_DB=!!(SUPA.url&&SUPA.key);
 const KEY=HAS_DB?"qratt_live_v2":"qratt_v4";
 let loaded=!HAS_DB;
@@ -438,6 +453,7 @@ async function pull(){
 async function pushRecord(r){ if(sb)try{await sb.from("records").upsert(r,{onConflict:"sid,date"})}catch(e){console.warn(e)} }
 async function pushPayment(sid,amount){ if(sb)try{await sb.from("payments").insert({sid,amount})}catch(e){console.warn(e)} }
 function refreshUI(){
+  if(typeof applyFineConfig==="function")applyFineConfig();
   checkSetup();paintSchool();
   if(!me)return;
   if(me.type==="student"&&find(me.sid))drawStudent();
@@ -729,7 +745,48 @@ $("#wCloseNow").onclick=async()=>{
   miss.forEach(r=>db.records.push(r));db.windows[d]=w;save();tick();drawRoster();drawLog();flash(m,"Closed. "+miss.length+" student(s) with no record were marked Absent.",true);
 };
 
-document.querySelectorAll("[data-mark]").forEach(b=>{const f=FINE[b.dataset.mark];b.textContent=b.dataset.mark+(f?" (₱"+f+")":"")});
+function relabelFineButtons(){document.querySelectorAll("[data-mark]").forEach(b=>{const f=FINE[b.dataset.mark];b.textContent=b.dataset.mark+(f?" (₱"+f+")":"")})}
+relabelFineButtons();
+/* ---------- configurable fine amounts ---------- */
+function applyFineConfig(){
+  let c={};try{c=JSON.parse(db.settings&&db.settings.fine_config||"{}")}catch(e){}
+  if(c.status){["Present","Late","Absent","Excused"].forEach(k=>{if(c.status[k]!=null)FINE[k]=+c.status[k]||0})}
+  if(Array.isArray(c.types)){
+    Object.keys(FINE_TYPES).forEach(k=>delete FINE_TYPES[k]);
+    c.types.forEach(t=>{if(t&&t.name)FINE_TYPES[String(t.name).trim()]=+t.amount||0});
+  }
+  relabelFineButtons();
+  const dl=$("#fineTypes");if(dl)dl.innerHTML=Object.keys(FINE_TYPES).map(k=>`<option value="${esc(k)}">`).join("");
+}
+applyFineConfig();
+let fcTypesDraft=null;
+function fcDrawTypes(){
+  $("#fcTypes").innerHTML=Object.keys(fcTypesDraft).length?Object.keys(fcTypesDraft).map(k=>
+    `<div class="row" style="margin-top:6px" data-t="${esc(k)}"><input value="${esc(k)}" disabled style="flex:1;min-width:150px"><input type="number" min="0" value="${esc(fcTypesDraft[k])}" style="width:110px" data-amt><button data-rm>Remove</button></div>`
+  ).join(""):"<p class='muted'>No custom fine types yet.</p>";
+}
+function fcLoad(){
+  $("#fcLate").value=FINE.Late||0;$("#fcAbsent").value=FINE.Absent||0;$("#fcExcused").value=FINE.Excused||0;$("#fcPresent").value=FINE.Present||0;
+  fcTypesDraft=Object.assign({},FINE_TYPES);fcDrawTypes();$("#fcNewName").value="";$("#fcNewAmt").value="";$("#fcMsg").textContent="";
+}
+$("#fcTypes").addEventListener("input",e=>{const row=e.target.closest("[data-t]");if(!row||!e.target.hasAttribute("data-amt"))return;fcTypesDraft[row.dataset.t]=+e.target.value||0});
+$("#fcTypes").addEventListener("click",e=>{const row=e.target.closest("[data-t]");if(!row||!e.target.hasAttribute("data-rm"))return;delete fcTypesDraft[row.dataset.t];fcDrawTypes()});
+$("#fcAdd").onclick=()=>{
+  const n=$("#fcNewName").value.trim(),a=+$("#fcNewAmt").value||0;
+  if(!n){flash($("#fcMsg"),"Name the fine type first (e.g. No ID).",false);return}
+  fcTypesDraft[n]=a;$("#fcNewName").value="";$("#fcNewAmt").value="";fcDrawTypes();
+};
+$("#fcSave").onclick=async()=>{
+  const m=$("#fcMsg");
+  const cfg={status:{Late:+$("#fcLate").value||0,Absent:+$("#fcAbsent").value||0,Excused:+$("#fcExcused").value||0,Present:+$("#fcPresent").value||0},
+    types:Object.keys(fcTypesDraft).map(k=>({name:k,amount:fcTypesDraft[k]}))};
+  const value=JSON.stringify(cfg);
+  const err=await upsertRows("settings",[{key:"fine_config",value}],"key");
+  if(err){flash(m,"Could not save: "+err,false);return}
+  db.settings=db.settings||{};db.settings.fine_config=value;save();
+  applyFineConfig();drawRoster();if(cur&&!$("#hit").hidden)show(cur);
+  flash(m,"Fine amounts saved.",true);
+};
 /* ---------- fines & payments ---------- */
 function ledger(sid){
   const rows=[...recs(sid).filter(r=>FINE[r.status]).map(r=>({d:r.date,l:r.status+" (auto)",a:FINE[r.status],b:r.by})),
@@ -738,7 +795,6 @@ function ledger(sid){
     .sort((x,y)=>String(y.d).localeCompare(String(x.d))).slice(0,15);
   return "<tr><th>Date</th><th>Item</th><th>Amount</th><th>By</th></tr>"+(rows.length?rows.map(r=>`<tr><td>${esc(r.d)}</td><td>${esc(r.l)}</td><td class="${r.a<0?"ok":"bad"}">${r.a<0?"\u2212":"+"}${peso(Math.abs(r.a))}</td><td>${esc(r.b)}</td></tr>`).join(""):"<tr><td colspan='4' class='muted'>No fines or payments yet.</td></tr>");
 }
-const FINE_TYPES={"Littering":50,"No ID":20,"Improper uniform":30,"Missed cleaning duty":30,"Disrespect to staff":50};
 $("#fnType").addEventListener("input",()=>{const a=FINE_TYPES[$("#fnType").value.trim()];if(a&&!$("#fnAmt").value)$("#fnAmt").value=a});
 $("#fnBtn").onclick=async()=>{
   if(!cur)return;const title=$("#fnType").value.trim(),why=$("#fnWhy").value.trim(),amt=Math.round(+$("#fnAmt").value*100)/100;
@@ -819,7 +875,7 @@ $("#suBtn").onclick=async()=>{
   db.staff.push(row);db.staffAll.push(row);save();["suName","suId","suKey","suCode"].forEach(i=>$("#"+i).value="");
   me={type:"staff",id,admin:true};applyRole();screen("staff");await markStaffLogin(row);$("#stfTitle").textContent=name+" \u00B7 Admin";$("#date").value=today();loadWin();drawRoster();drawLog();go("dash");
 };
-function go(v){$$(".nav").forEach(x=>x.classList.toggle("on",x.dataset.v===v));["dash","scan","students","classes","staff","settings","records"].forEach(k=>$("#v"+k).hidden=k!==v);if(v!=="scan")stopCam();if(v==="dash")drawDash();if(v==="settings")fillSettings();if(v==="classes")drawClasses();window.scrollTo(0,0)}
+function go(v){$$(".nav").forEach(x=>x.classList.toggle("on",x.dataset.v===v));["dash","scan","students","classes","staff","settings","records"].forEach(k=>$("#v"+k).hidden=k!==v);if(v!=="scan")stopCam();if(v==="dash")drawDash();if(v==="settings")fillSettings();if(v==="classes")drawClasses();if(v==="scan")fcLoad();window.scrollTo(0,0)}
 const dOpen={};
 function drawTodayGroups(r){
   const by={};r.forEach(x=>by[x.sid]=x);const g={};
@@ -939,7 +995,7 @@ $("#sPrint").onclick=$("#sPrint").onclick=()=>{const s=me&&find(me.sid);if(s)pri
 
 /* ---------- roles, settings, passwords ---------- */
 const DEFAULT_ADMIN_HASH="10a409d1b3b188002c3882fc9961b909fde574c684ebf3310012493f7c99efb8";
-const STUDENT_EXTRAS=false; /* true = also show history, fines list and ID card to students */
+const STUDENT_EXTRAS=true; /* true = also show history, fines list and ID card to students */
 if(STUDENT_EXTRAS)document.body.classList.add("extras");
 const isAdmin=t=>!!t&&/^admin$/i.test(t.role||"");
 function applyRole(){
@@ -1184,9 +1240,9 @@ function drawStudent(){
   qr($("#sQR"),s.sid,6,{id:s.sid,staff:false,name:s.name});$("#sLedger").innerHTML=ledger(s.sid);
   const tr=db.records.find(r=>r.sid===s.sid&&r.date===today());$("#sToday").textContent=tr?"Today: "+tr.status+" at "+tr.time:"Today: not recorded yet";tick();$("#sId").innerHTML="";$("#sId").appendChild(idCard(s));
   const r=recs(s.sid).slice().reverse();
-  $("#sLog").innerHTML="<tr><th>Date</th><th>Time</th><th>Status</th><th>Fine</th></tr>"+
-   (r.length?r.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.time)}</td><td>${pill(x.status)}</td><td>${peso(FINE[x.status])}</td></tr>`).join(""):
-   "<tr><td colspan='4' class='muted'>No records yet.</td></tr>");
+  $("#sLog").innerHTML="<tr><th>Date</th><th>Event</th><th>Time</th><th>Status</th><th>Fine</th></tr>"+
+   (r.length?r.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc((db.windows[x.date]&&db.windows[x.date].title)||"\u2014")}</td><td>${esc(x.time)}</td><td>${pill(x.status)}</td><td>${peso(FINE[x.status])}</td></tr>`).join(""):
+   "<tr><td colspan='5' class='muted'>No records yet.</td></tr>");
 }
 
 /* ---------- staff ---------- */
